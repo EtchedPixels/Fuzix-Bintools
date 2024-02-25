@@ -4,8 +4,10 @@ Assembler, linker and supporting tools for the Fuzix C Compiler
 
 ## Installation
 
+````
 make
 make install
+````
 
 The default installation target is /opt/fcc to match the Fuzix Compiler Kit.
 Install this before the compiler kit and ensure this is on the path.
