@@ -18,22 +18,10 @@ Address mode syntax
 	LD A,(x+)		register post-increment
 	LD A,n(-x)		register pre-decrement with offset
 	LD A,n(x+)		register post-increment with offset
-
-Not yet handled
-
-	LD A,(PC + n)
-	LD A,@(PC + n)
+	LD A,(PC + n)		pc relative
+	LD A,@(PC + n)		pc relative, indirected
 	MMU ops
 
-Broken
-
-	LD A,(x+)
-
-this confuses the generic expression parser and will need some tweaking of
-the core code, or a specifc register name parser to fix it and the PC case
-which might be simpler
-
-
-Instruction size is determined by the register references. There are now
+Instruction size is determined by the register references. There are no
 memory to memory instructions so the size is always explicit.
 
