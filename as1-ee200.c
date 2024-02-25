@@ -81,6 +81,100 @@ void getaddr(ADDR *ap)
 }
 
 /*
+ *	Address with CPU6 extensions
+ *	(addr)
+ *	constant
+ *	reg
+ */
+void getaddr_ext(ADDR *ap, unsigned byte)
+{
+	int c;
+	unsigned indir = 0;
+	if (byte || cpu_model < 5) {
+		 getaddr(ap);
+		 return;
+	}
+	c = getnb();
+	if (c == '(')
+		indir = 1;
+	else
+		unget(c);
+	/* Should now be followed by an address, constant or register */
+	getaddr(ap);
+	if (indir) {
+		if ((ap->a_type & TMMODE) == TBR || (ap->a_type & TMMODE) == TWR)
+			aerr(SYNTAX_ERROR);
+		c = getnb();
+		if (c != ')')
+			aerr(SYNTAX_ERROR);
+		ap->a_type |= TMINDIR;
+	}
+}
+
+/* CPU6 extended reg or indexed
+
+	op reg,0-15
+	op off(reg),0-15	; not A
+	op (addr),0-15
+ */
+int getaddr_idx(ADDR *ap, ADDR *ai)
+{
+	unsigned c;
+	unsigned lead = 0;
+
+	if (cpu_model < 6) {
+		getaddr(ap);
+		return 0;
+	}
+	c = getnb();
+
+	ap->a_value = 0;
+	ap->a_type = 0;
+
+	/* Leading value ? */
+	if (c != '(') {
+		unget(c);
+		getaddr(ap);
+		c = getnb();
+		lead = 1;
+	}
+
+	/* If there is no bracket it's a simple form, but we put the value
+	   in the wrong addr. Copy it over and return */
+	if (c != '(') {
+		unget(c);
+		return 0;
+	}
+
+	/* Decode the bracketed expression */
+	getaddr(ai);
+	c = getnb();
+	if (c != ')') {
+		aerr(SYNTAX_ERROR);
+		return -1;
+	}
+	switch(ai->a_type & TMMODE) {
+	case TWR:
+		if ((ai->a_type & TMREG) == RA)
+			aerr(NOAIDX);
+		return 1;
+	case TUSER:
+		/* Can't write 44(55) */
+		if (lead) {
+			aerr(WREGONLY);
+			return -1;
+		}
+		return 2;
+	case TBR:
+		aerr(WREGONLY);
+		return -1;
+	default:
+		aerr(SYNTAX_ERROR);
+		return -1;
+	}
+}
+
+/*
  *	Encode a full address description
  *
  *	constant
@@ -259,6 +353,7 @@ void asmline(void)
 	char id1[NCPS];
 	ADDR a1;
 	ADDR a2;
+	ADDR a3;
 	unsigned r1, r2;
 	unsigned force8 = 0;
 
@@ -444,8 +539,9 @@ loop:
 	case TREGA8:
 		force8 = 1;
 	case TREGA:
-		getaddr(&a1);
+		r1 = getaddr_idx(&a1, &a3);
 		c = getnb();
+		disp = 0;
 		if (c == ',') {
 			getaddr(&a2);
 			constify(&a2);
@@ -458,34 +554,55 @@ loop:
 				aerr(RANGE);
 			disp = 1;
 			/* The EE200 doesn't have these extensions */
-			if (cpu_model <= 4)
+			if (cpu_model < 6)
 				aerr(BADCPU);
 		} else {
 			disp = 0;
 			unget(c);
 			a2.a_value = 0;
 		}
-		switch (a1.a_type & TMMODE) {
-		case TWR:
+
+		r2 = 0;		/* Index encoding */
+
+		switch(r1) {
+		case -1:	/* Error */
+			break;
+		case 1:		/* Register indexed word op */
+			r2 = a3.a_type & TMREG;
+		case 2:		/* Address */
 			if (force8)
 				aerr(BREGONLY);
-			if ((a1.a_type & TMREG)  == RA && !disp)
-				outab(opcode | 0x18);
-			else {
-				outab(opcode | 0x10);
-				outab(a2.a_value | ((a1.a_type & TMREG) << 4));
+			outab(opcode | 0x10);
+			outab(a2.a_value | 0x10 | (r2 << 4));
+			outraw(&a1);
+			break;
+		case 0:		/* CPU4 style op on register */
+			switch (a1.a_type & TMMODE) {
+			case TWR:
+				if (force8)
+					aerr(BREGONLY);
+				else if ((a1.a_type & TMREG)  == RA && !disp)
+					outab(opcode | 0x18);
+				else {
+					outab(opcode | 0x10);
+					outab(a2.a_value | ((a1.a_type & TMREG) << 4));
+				}
+				break;
+			case TBR:
+				/* No CPU6 indexed byte ops */
+				if (r1)
+					aerr(REGONLY);
+				else  if ((a1.a_type & TMREG)  == RAL && !disp)
+					outab(opcode | 0x8);
+				else {
+					outab(opcode);
+					outab(a2.a_value | ((a1.a_type & TMREG) << 4));
+				}
+				break;
+			default:
+				aerr(REGONLY);
 			}
 			break;
-		case TBR:
-			if ((a1.a_type & TMREG)  == RAL && !disp)
-				outab(opcode | 0x8);
-			else {
-				outab(opcode);
-				outab(a2.a_value | ((a1.a_type & TMREG) << 4));
-			}
-			break;
-		default:
-			aerr(REGONLY);
 		}
 		break;
 	/* As with TREGA but no short form */
@@ -578,7 +695,7 @@ loop:
 		case TBR:
 			if ((a1.a_type & TMMODE) != TBR)
 				aerr(BREGONLY);
-			if (r1 == RBL && r2 == RAL)
+			if (r1 == RAL && r2 == RBL)
 				outab(0x4D);
 			else {
 				outab(0x45);
@@ -633,21 +750,40 @@ loop:
 	case TREG2A8:
 		force8 = 1;
 	case TREG2A:
-		getaddr(&a1);
+		/* CPU6 also allows for other modes on 0x50-0x55 instructions
+			(src), dst
+			const, dst
+			src, (dst) */
+
+		getaddr_ext(&a1, force8);
 		comma();
-		getaddr(&a2);
+		getaddr_ext(&a2, force8);
 		switch(a1.a_type & TMMODE) {
 		case TWR:
 			if (force8)
 				aerr(BREGONLY);
-			if ((a2.a_type & TMMODE) != TWR)
-				aerr(WREGONLY);
-			if ((a2.a_type & TMREG) == RB &&
-				(a1.a_type & TMREG) == RA)
-				outab(opcode | 0x18);
-			else {
-				outab(opcode | 0x10);
-				outab((a1.a_type & TMREG) << 4 | (a2.a_type & TMREG));
+			switch(a2.a_type & TMMODE) {
+				case TBR:
+					aerr(WREGONLY);
+					break;
+				case TWR:
+					if ((a2.a_type & TMREG) == RB &&
+						(a1.a_type & TMREG) == RA) {
+						outab(opcode | 0x18);
+					} else {
+						outab(opcode | 0x10);
+						outab((a1.a_type & TMREG) << 4 | (a2.a_type & TMREG));
+					}
+					break;
+				case TMINDIR|TUSER:
+					if (cpu_model < 5)
+						aerr(BADCPU);
+					outab(opcode | 0x10);
+					outab(((a1.a_type & TMREG) << 4)| 0x11);
+					outraw(&a2);
+					break;
+				default:
+					aerr(SYNTAX_ERROR);
 			}
 			break;
 		case TBR:
@@ -660,33 +796,74 @@ loop:
 				outab(opcode);
 				outab((a1.a_type & TMREG) << 4 | (a2.a_type & TMREG));
 			}
+			break;
+		case TUSER:
+			if (cpu_model < 5)
+				aerr(BADCPU);
+			outab(opcode | 0x10);
+			outab((a2.a_type & TMREG)| 0x10);
+			outraw(&a1);
+			break;
+		case TMINDIR|TUSER:
+			if (cpu_model < 5)
+				aerr(BADCPU);
+			if ((a2.a_type & TMMODE) != TWR)
+				aerr(WREGONLY);
+			outab(opcode | 0x10);
+			outab((a2.a_type & TMREG) | 0x01);
+			outraw(&a1);
 			break;
 		default:
 			aerr(REGONLY);
 		}
 		break;		
-	/* Two register ALU operations with no word short forms */
-	case TREG2ANWS:
-		getaddr(&a1);
+	/* Two register ALU operations with no short forms */
+	case TREG2ANS:
+		getaddr_ext(&a1, 0);
 		comma();
-		getaddr(&a2);
+		getaddr_ext(&a2, 0);
 		switch(a1.a_type & TMMODE) {
 		case TWR:
-			if ((a2.a_type & TMMODE) != TWR)
-				aerr(WREGONLY);
-			outab(opcode | 0x10);
-			outab((a2.a_type & TMREG) << 4 | (a1.a_type & TMREG));
+			switch(a2.a_type & TMMODE) {
+				case TBR:
+					aerr(WREGONLY);
+					break;
+				case TWR:
+					outab(opcode | 0x10);
+					outab((a1.a_type & TMREG) << 4 | (a2.a_type & TMREG));
+					break;
+				case TMINDIR|TUSER:
+					if (cpu_model < 5)
+						aerr(BADCPU);
+					outab(opcode | 0x10);
+					outab(((a1.a_type & TMREG) << 4)| 0x11);
+					outraw(&a2);
+					break;
+				default:
+					aerr(SYNTAX_ERROR);
+			}
 			break;
 		case TBR:
 			if ((a2.a_type & TMMODE) != TBR)
 				aerr(BREGONLY);
-			if ((a2.a_type & TMREG) == RBL &&
-				(a1.a_type & TMREG) == RAL)
-				outab(opcode | 0x08);
-			else {
-				outab(opcode);
-				outab((a1.a_type & TMREG) << 4 | (a2.a_type & TMREG));
-			}
+			outab(opcode);
+			outab((a1.a_type & TMREG) << 4 | (a2.a_type & TMREG));
+			break;
+		case TUSER:
+			if (cpu_model < 5)
+				aerr(BADCPU);
+			outab(opcode | 0x10);
+			outab((a2.a_type & TMREG)| 0x10);
+			outraw(&a1);
+			break;
+		case TMINDIR|TUSER:
+			if (cpu_model < 5)
+				aerr(BADCPU);
+			if ((a2.a_type & TMMODE) != TWR)
+				aerr(WREGONLY);
+			outab(opcode | 0x10);
+			outab((a2.a_type & TMREG) | 0x01);
+			outraw(&a1);
 			break;
 		default:
 			aerr(REGONLY);
@@ -871,6 +1048,24 @@ loop:
 		outab(c - 1);
 		outraw(&a1);
 		outraw(&a2);
+		break;
+	case TRANGE:
+		if (cpu_model <= 4)
+			aerr(BADCPU);
+		getaddr(&a1);
+		comma();
+		getaddr(&a2);
+		if ((a1.a_type & TMMODE) != TBR || (a2.a_type & TMMODE) != TBR)
+			aerr(BREGONLY);
+		outab(opcode);
+		r1 = a1.a_type & TMREG;
+		r2 = a2.a_type & TMREG;
+		if (r1 > r2) {
+			unsigned x = r1;
+			r1 = r2;
+			r2 = x;
+		}
+		outab((r1 << 4) | ((r2 - r1) + 1));
 		break;
 	default:
 		aerr(SYNTAX_ERROR);

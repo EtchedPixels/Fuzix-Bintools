@@ -1142,7 +1142,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define INVALIDAMODE	28
 #define POINTER_REQ	29
 
-#elif TARGET_WARREX
+#elif TARGET_EE200
 
 typedef	uint16_t	VALUE;		/* For symbol values */
 
@@ -1199,7 +1199,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TDMA	0x1700			/* DMA word register */
 #define TDMAM	0x1800			/* DMA mode */
 #define TREG2A	0x1900			/* Two reg with B,A short forms */
-#define TREG2ANWS 0x1A00		/* But without the BX,AX word short */
+#define TREG2ANS 0x1A00			/* But without the short form */
 #define TJUMP	0x1B00			/* Jump/call */
 #define TLOAD	0x1C00			/* Load */
 #define TSTORE	0x1D00			/* Store */
@@ -1217,6 +1217,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define	TSETCPU	0x2900			/* setcpu */
 #define TIMPL6	0x2A00			/* Not present on CPU4 */
 #define TBLOCK	0x2B00			/* Block operations CPU6 only */
+#define TRANGE	0x2C00			/* Range CPU6 only */
 
 /*
  * Registers.
@@ -1287,6 +1288,8 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define RANGE		36
 #define AREGONLY	37
 #define BADCPU		38
+#define NOAIDX		39
+
 
 #else
 #error "Unknown target"

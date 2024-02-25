@@ -4,17 +4,17 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      as8008 ld8008 nm8008 osize8008 dumprelocs8008 \
      as8080 ld8080 nm8080 osize8080 dumprelocs8080 \
      as9900 ld9900 nm9900 osize9900 dumprelocs9900 \
+     asee200 ldee200 nmee200 osizeee200 dumprelocsee200 \
      asz8 ldz8 nmz8 osizez8 dumprelocsz8 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 
 
 test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
-     asnova ldnova nmnova osizenova dumprelocsnova \
+     asnova ldnova nmnova osizenova dumprelocsnova
 
 todo: as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
       as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
-      aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 \
-      asee200 ldee200 nm9995 osizeee200 dumprelocsee200
+      aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
 
 CCROOT ?=/opt/fcc/
 
@@ -159,7 +159,7 @@ dumprelocs9900: $(HDR) dumprelocs.o
 	cc -o dumprelocs9900 dumprelocs.o
 
 asee200: $(HDR) $(CORE) as1-ee200.c as6-ee200.c
-	cc  -DTARGET_Z8 -o asee200 $(CORE) as1-ee200.c as6-ee200.c
+	cc  -DTARGET_EE200 -o asee200 $(CORE) as1-ee200.c as6-ee200.c
 
 ldee200: $(HDR) ld.c
 	cc -o ldee200 ld.c
@@ -245,6 +245,7 @@ install: all
 	cp as8008 ld8008 nm8008 osize8008 dumprelocs8008 $(CCROOT)/bin
 	cp as8080 ld8080 nm8080 osize8080 dumprelocs8080 $(CCROOT)/bin
 	cp as9900 ld9900 nm9900 osize9900 dumprelocs9900 $(CCROOT)/bin
+	cp asee200 ldee200 nmee200 osizeee200 dumprelocsee200 $(CCROOT)/bin
 	cp asz8 ldz8 nmz8 osizez8 dumprelocsz8 $(CCROOT)/bin
 	cp asz80 ldz80 nmz80 osizez80 dumprelocsz80 $(CCROOT)/bin
 
@@ -255,5 +256,4 @@ installtest: test
 
 #	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
 #	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
-#	cp asee200 ldee200 nmee200 osizeee200 dumprelocsee200 $(CCROOT)/bin
 #	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin

@@ -53,9 +53,6 @@ SYM	sym[] = {
 	{	0,	"bss",		TSEGMENT,	BSS	},
 	{	0,	"discard",	TSEGMENT,	DISCARD	},
 	{	0,	"common",	TSEGMENT,	COMMON	},
-	{	0,	"literal",	TSEGMENT,	LITERAL },
-	{	0,	"commondata",	TSEGMENT,	COMMONDATA },
-	{	0,	"buffers",	TSEGMENT,	BUFFERS	},
 	{	0,	".abs",		TSEGMENT,	ABSOLUTE},
 	{	0,	".code",	TSEGMENT,	CODE	},
 	{	0,	".data",	TSEGMENT,	DATA	},
@@ -63,8 +60,6 @@ SYM	sym[] = {
 	{	0,	".discard",	TSEGMENT,	DISCARD	},
 	{	0,	".common",	TSEGMENT,	COMMON	},
 	{	0,	".literal",	TSEGMENT,	LITERAL },
-	{	0,	".commondata",	TSEGMENT,	COMMONDATA },
-	{	0,	".buffers",	TSEGMENT,	BUFFERS	},
 
 	/* 0x0X		:	Implicit */
 	{	0,	"hlt",		TIMPL,		0x00	},
@@ -82,7 +77,7 @@ SYM	sym[] = {
 	{	0,	"elo",		TIMPL,		0x0C	},
 	{	0,	"pcx",		TIMPL,		0x0D	},
 	{	0,	"dly",		TIMPL,		0x0E	},
-	{	0,	"sysret",	TIMPL6,		0x0F	},
+	{	0,	"rsys",		TIMPL6,		0x0F	},
 
 	/* 0x1X		:	Branches */
 #if 0
@@ -103,6 +98,9 @@ SYM	sym[] = {
 	{	0,	"bs3",		TREL8,		0x1C	},
 	{	0,	"bs4",		TREL8,		0x1D	},
 	{	0,	"btm",		TREL8,		0x1E	},
+	/* CPU 4 this is used for the bitbanger teletype, CPU6 it is
+	   repurposed for checking the interrupt flag */
+	{	0,	"bie",		TREL8,		0x1E	},
 	{	0,	"bep",		TREL8,		0x1F	},
 	
 	/* Special magic forms : these will be smart one day */
@@ -127,7 +125,8 @@ SYM	sym[] = {
 	/* 0x2X		:	Mix of ALU and misc */
 	/* Short forms apply to AL, long forms any register */
 	/* 0x3x versions are word and apply to A, long to any register */
-	/* TODO: add inrb etc forms for specific 8bit */
+	/* On CPU6 the 16bit forms 3x have a second form allowing an
+	   address or index of register except A to be used */
 
 	{	0,	"inr",		TREGA,		0x20	},
 	{	0,	"dcr",		TREGA,		0x21	},
@@ -181,14 +180,16 @@ SYM	sym[] = {
 	{	0,	"sub",		TREG2A,		0x41	},
 	{	0,	"and",		TREG2A,		0x42	},
 	/* These forms have no short word version */
-	{	0,	"ori",		TREG2ANWS,	0x43	},
-	{	0,	"ore",		TREG2ANWS,	0x44	},
+	{	0,	"ori",		TREG2ANS,	0x43	},
+	{	0,	"ore",		TREG2ANS,	0x44	},
 
 	{	0,	"addb",		TREG2A8,	0x40	},
 	{	0,	"subb",		TREG2A8,	0x41	},
 	{	0,	"andb",		TREG2A8,	0x42	},
 	{	0,	"orib",		TREG2A8,	0x43	},
 	{	0,	"oreb",		TREG2A8,	0x44	},
+
+	/* Special 0x46: this is bignums and not yet all decoded */
 
 	/* Special 0x47: forms we know */
 
@@ -222,8 +223,12 @@ SYM	sym[] = {
 	/* 0x7X		:	Calls and other */
 	{	0,	"jmp",		TJUMP,		0x70	},
 	{	0,	"jsr",		TJUMP,		0x78	},
-	{	0,	"syscall",	TIMPL6,		0x76	},
+	{	0,	"jsys",		TIMPL6,		0x76	},
 	
+	/* 0x7E/7F	;	CPU6 push/pop range */
+	{	0,	"push",		TRANGE,		0x7E	},
+	{	0,	"pop",		TRANGE,		0x7F	},
+
 	/* 0x8x-0xFF	:	A and B load/store */
 
 	{	0,	"ld",		TLOAD,		0x00	},
@@ -240,6 +245,9 @@ SYM	sym[] = {
 	{	0,	"stb",		TSTOREEW,	0xF0	},
 	{	0,	"stbb",		TSTOREEB,	0xE0	},
 	{	0,	"stx",		TSTOREX,	0x68	},
+
+	/* Specials in the 80-FF rangee using X6 and X7 */
+	{	0,	"cpy",		TIMPL6,		0xF7	},
 };
 
         
@@ -294,6 +302,7 @@ char *etext[] = {
 	"Out of range",			/* 36 */
 	"A register only",		/* 37 */
 	"Not available on CPU4",	/* 38 */
+	"Cannot index via A",		/* 39 */
 };
 
 /*
