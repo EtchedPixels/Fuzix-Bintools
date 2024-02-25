@@ -1,0 +1,12 @@
+Bugs
+
+	BRK need #
+	COP needs # and isn't checking 65C916
+	MVN ditto
+
+	Need a way to specify DP explicitly
+	Rmeove assumption small const is DP
+
+	Add ,S and (sr,S),Y
+
+	cpy and cpx only allow immed addr dp
