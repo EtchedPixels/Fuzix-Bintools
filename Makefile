@@ -6,7 +6,8 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      as9900 ld9900 nm9900 osize9900 dumprelocs9900 \
      asee200 ldee200 nmee200 osizeee200 dumprelocsee200 \
      asz8 ldz8 nmz8 osizez8 dumprelocsz8 \
-     asz80 ldz80 nmz80 osizez80 dumprelocsz80 
+     asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
+     reloc
 
 test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
      asnova ldnova nmnova osizenova dumprelocsnova
@@ -22,6 +23,9 @@ HDR = as.h ld.h obj.h
 CORE = as0.c as2.c as3.c as4.c
 
 CFLAGS += -Wall -pedantic
+
+reloc: $(HDR) reloc.c
+	cc reloc.c -o reloc
 
 as1802: $(HDR) $(CORE) as1-1802.c as6-1802.c
 	cc  -DTARGET_1802 -o as1802 $(CORE) as1-1802.c as6-1802.c
@@ -234,6 +238,7 @@ clean:
 	rm -f aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
 	rm -f asz8 ldz8 nmz8 osizez8 dumprelocsz8
 	rm -f asz80 ldz80 nmz80 osizez80 dumprelocsz80
+	rm -f reloc
 
 # FIXME: allow root specification
 
@@ -248,6 +253,7 @@ install: all
 	cp asee200 ldee200 nmee200 osizeee200 dumprelocsee200 $(CCROOT)/bin
 	cp asz8 ldz8 nmz8 osizez8 dumprelocsz8 $(CCROOT)/bin
 	cp asz80 ldz80 nmz80 osizez80 dumprelocsz80 $(CCROOT)/bin
+	cp reloc $(CCROOT)/bin/relocz80
 
 installtest: test
 	mkdir -p /opt/fcc/bin
