@@ -374,7 +374,7 @@ loop:
 			outab(opcode);
 			outraw(&a1);
 		} else {
-			/* These shoudl never happen */
+			/* These should never happen */
 			if (a1.a_segment == UNKNOWN)
 				aerr(UNKNOWN_SYMBOL);
 			else if (disp<-128 || disp>127 || a1.a_segment != segment)
