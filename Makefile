@@ -10,10 +10,10 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      reloc
 
 test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
-     asnova ldnova nmnova osizenova dumprelocsnova
+      asnova ldnova nmnova osizenova dumprelocsnova \
+      as8070 ld8070 nm8070 osize8070 dumprelocs8070
 
 todo: as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
-      as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
       as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
       aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
 
@@ -259,7 +259,7 @@ installtest: test
 	mkdir -p /opt/fcc/bin
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp asnova ldnova nmnova osizenova dumprelocsnova $(CCROOT)/bin
+	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
 
 #	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
-#	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
 #	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin

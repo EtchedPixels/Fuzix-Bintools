@@ -1,3 +1,16 @@
+Differences from the reference 8070 instruction set
+
+.word not .dbyte (TO FIX)
+No X`FF etc but 0xFF syntax is used (probably WONTFIX)
+#nn is supported for constants as well as =nn
+The use of $ in a symbol is not a good idea
+Expressions are more limited (TODO one day)
+Lowercase is used
+Need to add .ADDR (writes value - 1)
+
+
+Notes:
+
 Although similar to the 8060 the assembly language format changes totally
 
 We split them up as
@@ -8,11 +21,11 @@ Implicit
 	SSM
 
 imm16
-	JSR
+	JSR	(PLI 0, addr)
 	JMP	(LDI 0) 
 
 p,imm16
-	PLI	(JSR is PLI 0)
+	PLI
 
 logic8
 	AND XOR (no S) OR
@@ -58,8 +71,6 @@ EA/T
 	DIV EA,T
 	MPY EA,T
 
-
-
 Loads
 	E,A
 	S,A
@@ -86,22 +97,19 @@ Stores
 	EA,mem
 	EA,0xffxx
 
-
-
-
 A only
 	RR
 	RRL
 	SRL
 	
-
 A/EA
 	SL	A
 	SR	A
 	SL	EA
 	SR	EA
 
-Pop	POP/PUSH
+Pop	POP/PUSH	These have equivalent LD/ST representations
+			but are unique instructions not aliases
 
 	A
 	EA
@@ -112,10 +120,21 @@ Pop	POP/PUSH
 	Pn (not P1)
 
 Syntax
+	:n		direct page.
 	=n		constant (also support #n I think)
 	n,Pn		offset (Pn, SP, PC)
 	@n,Pn		autoindex (--Pn Pn++)
+	Pn,@n		"" implies reverse sign
 
-need a DP syntax for FFxx
+There is no automatic recognition of FFxx as direct page at this point, as
+the classic assembler does because we have an actual linker so addresses
+are unknown.
 
+We accept the non alias versions of some instructions. So LD P0,=n (JMP) is
+permitted as is PLI P0,=n (JSR) and POP P0 (RET)
+
+BZ and BNZ are supported as JZ and JNZ for extension. BRA will extend to JMP
+when necessary. The BP and BND have no inverses. There is no test for CC and
+other flags. This is architectural. Instead LD A,S AND A,=n then BZ/BNZ.
+Likewise things like "clear carry" are done with AND/OR S,=n
 

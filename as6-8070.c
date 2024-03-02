@@ -1,5 +1,5 @@
 /*
- * SCP/MP
+ * INS 8070
  * Basic symbol tables.
  * Contain all of the instructions
  * and register names.
@@ -14,17 +14,17 @@
  * table at start-up time.
  */
 SYM	sym[] = {
-	{	0,	"pc",		TBR,		P0	},
-	{	0,	"sp",		TBR,		P1	},
-	{	0,	"p0",		TBR,		P0	},
-	{	0,	"p1",		TBR,		P1	},
-	{	0,	"p2",		TBR,		P2	},
-	{	0,	"p3",		TBR,		P3	},
+	{	0,	"pc",		TWR,		P0	},
+	{	0,	"sp",		TWR,		P1	},
+	{	0,	"p0",		TWR,		P0	},
+	{	0,	"p1",		TWR,		P1	},
+	{	0,	"p2",		TWR,		P2	},
+	{	0,	"p3",		TWR,		P3	},
 	{	0,	"a",		TBR,		A	},
-	{	0,	"ea",		TBR,		EA	},
+	{	0,	"ea",		TWR,		EA	},
 	{	0,	"e",		TBR,		E	},
 	{	0,	"s",		TBR,		S	},
-	{	0,	"t",		TBR,		T	},
+	{	0,	"t",		TWR,		T	},
 	{	0,	"defb",		TDEFB,		XXXX	},
 	{	0,	"defw",		TDEFW,		XXXX	},
 	{	0,	"defs",		TDEFS,		XXXX	},
@@ -34,6 +34,7 @@ SYM	sym[] = {
 	{	0,	"export",	TEXPORT,	XXXX	},
 	{	0,	".byte",	TDEFB,		XXXX	},
 	{	0,	".word",	TDEFW,		XXXX	},
+	{	0,	".dbyte",	TDEFW,		XXXX	},
 	{	0,	".blkb",	TDEFS,		XXXX	},
 	{	0,	".ascii",	TDEFM,		XXXX	},
 	{	0,	".org",		TORG,		XXXX	},
@@ -86,10 +87,10 @@ SYM	sym[] = {
 	{	0,	"ild",		TMEM8,		0x90	},
 
 	/* branches */
-	{	0,	"bnd",		TBND,		0x2D	},
+	{	0,	"bnd",		TBRA,		0x2D	},
 	{	0,	"bp",		TBRA,		0x64	},
 	{	0,	"bz",		TBRA,		0x6C	},
-	{	0,	"bra",		TBRA,		0x74	},
+	{	0,	"bra",		TBRA16,		0x74	},
 	{	0,	"bnz",		TBRA,		0x8C	},
 
 	/* exchange */
@@ -111,13 +112,20 @@ SYM	sym[] = {
 	{	0,	"rrl",		TAONLY,		0x3F	},
 	{	0,	"srl",		TAONLY,		0x3D	},
 
-	/*A or EA */
-	{	0,	"sl",		TAEA		0x0E0F	},
+	/* A or EA */
+	{	0,	"sl",		TAEA,		0x0E0F	},
 	{	0,	"sr",		TAEA,		0x3C0C	},
 
 	/* Stack */
 	{	0,	"push",		TSTACK,		0x0854	},
-	{	0,	"pop",		TSTACK,		0x385C	}
+	{	0,	"pop",		TSTACK,		0x385C	},
+
+	/* Helper ops */
+	{	0,	"jz",		TBRA16,		0x6C	},
+	{	0,	"jnz",		TBRA16,		0x7C	},
+
+	/* Funny one for addresses where the value - 1 is used */
+	{	0,	".addr",	TADDR,		XXXX	}
 };
 
 /*
@@ -142,26 +150,30 @@ void syminit(void)
 }
 
 char *etext[] = {
-	"unexpected character",
-	"phase error",
-	"multiple definitions",
-	"syntax error",
-	"must be absolute",
-	"missing delimiter",
-	"invalid constant",
-	"address required",
-	"invalid id",
-	"bad mode",
-	"constant out of range",
-	"data in BSS",
-	"segment overflow",
-	"segment conflict",
-	"divide by zero",
-	"autoindexing not permitted",
-	"branch out of range",
-	"out of range",
-	"invalid addressing mode",
-	"pointer required"
+	"unexpected character",	/* 10 */
+	"phase error",		/* 11 */
+	"multiple definitions",	/* 12 */
+	"syntax error",		/* 13 */
+	"must be absolute",	/* 14 */
+	"missing delimiter",	/* 15 */
+	"invalid constant",	/* 16 */
+	"address required",	/* 17 */
+	"invalid id",		/* 18 */
+	"bad mode",		/* 19 */
+	"constant out of range",/* 20 */
+	"data in BSS",		/* 21 */
+	"segment overflow",	/* 22 */
+	"segment conflict",	/* 23 */
+	"divide by zero",	/* 24 */
+	"autoindexing not permitted",	/* 25 */
+	"branch out of range",	/* 26 */
+	"out of range",		/* 27 */
+	"invalid addressing mode",	/* 28 */
+	"pointer required",	/* 29 */
+	"invalid register",	/* 30 */
+	"too many jz/jnz",	/* 31 */
+	"A register only",	/* 32 */
+	"A or EA required",	/* 33 */
 };
 
 /*

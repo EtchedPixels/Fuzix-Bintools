@@ -1,5 +1,5 @@
 /*
- * Z-80 assembler.
+ * Assembler.
  * Header file, used by all
  * parts of the assembler.
  */
@@ -529,7 +529,8 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define	TUSER	0x0100			/* User name */
 #define	TBR	0x0200			/* Byte register */
 #define	TWR	0x0300			/* Word register */
-#define	TSR	0x0400			/* Special register (I, R) */
+#define	TCC	0x0400			/* Condition code (not used but needed by core) */
+#define	TSR	0x0400			/* Special reg (not used but needed by core) */
 #define	TDEFB	0x0500			/* defb */
 #define	TDEFW	0x0600			/* defw */
 #define	TDEFS	0x0700			/* defs */
@@ -551,8 +552,8 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TIMP	0x1800			/* implied by instruction */
 #define TLO	0x1900			/* low instructions with some modes */
 #define TLEA	0x1A00			/* lea */
-#define TBR	0x1B00			/* branch */
-#define TLBR	0x1C00			/* long branch */
+#define TBRA	0x1B00			/* branch */
+#define TLBRA	0x1C00			/* long branch */
 
 #define TAIMM	0x0000			/* #x :immediate mode 8bit */
 #define TADIR	0x0010			/* dp:x */
@@ -590,17 +591,19 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define INVALID_CONST	16
 #define BRA_RANGE	17
 #define CONDCODE_ONLY	18
-#define INVALID_REG	19
-#define ADDR_REQUIRED	20
-#define INVALID_ID	21
-#define REG_MUST_BE_C	22
+#define INVALID_REGISTER	19
+#define MUST_BE_INDEXED	20
+#define BAD_MODE	21
 #define DIVIDE_BY_ZERO	23
 #define CONSTANT_RANGE  24
 #define DATA_IN_BSS	 25
 #define SEGMENT_OVERFLOW 26
 #define DATA_IN_ZP	27
-#define REQUIRE_Z180	28
+#define REQUIRE_6309	28
 #define	SEGMENT_CLASH	29
+#define ADDR_REQUIRED	30
+#define INVALID_INDIR	31
+#define INVALID_ID	32
 
 #elif TARGET_6800
 
@@ -1141,6 +1144,116 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define RANGE		27
 #define INVALIDAMODE	28
 #define POINTER_REQ	29
+
+#elif TARGET_8070
+
+typedef	uint16_t	VALUE;		/* For symbol values */
+
+#define ARCH OA_INS8070
+#define ARCH_FLAGS 0
+#define ARCH_CPUFLAGS 0
+
+/*
+ * Types. These are used
+ * in both symbols and in address
+ * descriptions. Observe the way the
+ * symbol flags hide in the register
+ * field of the address.
+ */
+#define	TMREG	0x000F			/* Register code */
+#define	TMMDF	0x0001			/* Multidef */
+#define	TMASG	0x0002			/* Defined by "=" */
+#define	TMMODE	0xFF00			/* Mode */
+#define	TMINDIR	0x8000			/* Indirect flag in mode */
+#define TPUBLIC	0x0080			/* Exported symbol */
+#define TMADDR	0x00F0			/* Addressing mode bits */
+
+#define TINDEX	0x0010			/* Indexed */
+#define TIMMED	0x0020			/* Immediate */
+#define TAUTOINDEX 0x0030		/* Autoindex */
+#define TDIRECT 0x0040			/* FFxx */
+
+#define	TNEW	0x0000			/* Virgin */
+#define	TUSER	0x0100			/* User name */
+#define	TBR	0x0200			/* Byte register */
+#define	TWR	0x0300			/* Word register */
+#define	TSR	0x0400			/* Special register */
+#define	TDEFB	0x0500			/* defb */
+#define	TDEFW	0x0600			/* defw */
+#define	TDEFS	0x0700			/* defs */
+#define	TDEFM	0x0800			/* defm */
+#define	TORG	0x0900			/* org */
+#define	TEQU	0x0A00			/* equ */
+#define	TCOND	0x0B00			/* conditional */
+#define	TENDC	0x0C00			/* end conditional */
+#define TSEGMENT 0x0D00			/* segments by number */
+#define TEXPORT 0x0E00			/* symbol export */
+#define TCC	0x0F00
+/* CPU specific codes */
+#define TIMPL	0x1000			/* Implicit */
+#define TP2P3	0x1100			/* Can use P2 or P3 */
+#define TIMM16	0x1200			/* Immediate 16bit */
+#define TPIMM16	0x1300			/* Weird PLI */
+#define TLOGIC	0x1400			/* and/or/xor */
+#define TLOGIC16 0x1500			/* 16bit supporting - add/sub */
+#define TMEM8	0x1600			/* 8bit memory ptr */
+#define TBND	0x1700			/* BND operation */
+#define TBRA	0x1800			/* Branches */
+#define TXCH	0x1900			/* Exchange operation */
+#define TCALL	0x1A00			/* Call */
+#define TEAT	0x1B00			/* EA,T ops */
+#define TLOAD 	0x1C00			/* Load */
+#define TSTORE	0x1D00			/* Store */
+#define TAONLY	0x1E00			/* A only */
+#define TAEA	0x1F00			/* A or EA */
+#define TSTACK	0x2000			/* PUSH and POP */
+#define TBRA16	0x2100			/* Self expanding branch helpers */
+#define TADDR	0x2200			/* .addr */
+
+#define	P0	0			/* Must be 0-3 to match encoding */
+#define P1	1
+#define P2	2
+#define P3	3
+#define EA	4
+#define T	5
+
+#define A	6			/* Don't overlap the numbers */
+#define E	7			/* Makes the as1 logic easier */
+#define S	8
+
+
+/*
+ *	Error message numbers
+ */
+
+#define BRACKET_EXPECTED 1
+#define MISSING_COMMA	2
+#define SQUARE_EXPECTED 3
+#define PERCENT_EXPECTED 4
+#define UNEXPECTED_CHR	10
+#define PHASE_ERROR	11
+#define MULTIPLE_DEFS	12
+#define SYNTAX_ERROR	13
+#define MUST_BE_ABSOLUTE	14
+#define MISSING_DELIMITER 15
+#define INVALID_CONST	16
+#define ADDR_REQUIRED	17
+#define INVALID_ID	18
+#define BADMODE		19
+#define CONSTANT_RANGE  20
+#define DATA_IN_BSS	21
+#define SEGMENT_OVERFLOW 22
+#define	SEGMENT_CLASH	23
+#define DIVIDE_BY_ZERO	24
+#define NO_AUTOINDEX	25
+#define BRA_RANGE	26
+#define RANGE		27
+#define INVALIDAMODE	28
+#define POINTER_REQ	29
+#define BADREG		30
+#define TOOMANYJCC	31
+#define AREQUIRED	32
+#define AEAREQUIRED	33
 
 #elif TARGET_EE200
 

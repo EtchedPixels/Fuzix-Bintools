@@ -1,7 +1,16 @@
 /*
  * INS8070 assembler.
- * Assemble one line of input.
- * Knows all the dirt.
+ *
+ * The one oddity with this target is that almost all instructions
+ * expect a default of a P0 (PC) relative value. So for example
+ * 47 actually means "PC + 47". We thus have two getaddr forms because
+ * things like .word do not expect PC relative default.
+ *
+ * TODO:
+ *	- How to handle direct page encodings. DP is at FFxx not 00xx
+ *	  like other targets. May need a linker tweak ?
+ *	- Review all ops and forms
+ *	- Check all other forms error
  */
 #include	"as.h"
 
@@ -9,7 +18,7 @@
 /*
  * CPU specific pass setup
  */
- 
+
 /* FIXME: we should malloc/realloc this on non 8bit machines */
 static uint8_t reltab[1024];
 static unsigned int nextrel;
@@ -49,19 +58,6 @@ static void constify(ADDR *ap)
 		ap->a_type = TUSER;
 }
 
-static void constant_to_zp(ADDR *ap, int dp)
-{
-	/* dp means we wrote :foo meaning we want a DP reference and the symbol
-	   must be direct page */
-	if (dp) {
-		if (ap->a_segment != ABSOLUTE && ap->a_segment != ZP && ap->a_segment != UNKNOWN)
-			qerr(MUST_BE_ABSOLUTE);
-		/* Preserve constants and don't relocate them */
-		if (ap->a_segment != ABSOLUTE)
-			ap->a_segment = ZP;
-	}
-}
-
 /* Handle the corner case of labels in direct page being used as relative
    branches from the overlapping 'absolute' space */
 static int segment_incompatible(ADDR *ap)
@@ -73,6 +69,18 @@ static int segment_incompatible(ADDR *ap)
 	return 1;
 }
 
+static void a_required(ADDR *ap)
+{
+	if (ap->a_type != (TBR | A))
+		aerr(AREQUIRED);
+}
+
+static void index_required(ADDR *ap)
+{
+	if ((ap->a_type & TMMODE) != TWR || (ap->a_type & TMREG) == EA)
+		aerr(POINTER_REQ);
+}
+
 /*
  * Read in an address
  * descriptor, and fill in
@@ -81,12 +89,32 @@ static int segment_incompatible(ADDR *ap)
  * Exits directly to "qerr" if
  * there is no address field or
  * if the syntax is bad.
+ *
+ * Permitted forms
+ *
+ *	#constant	constant		(NS use =const)
+ *	:dp		direct page
+ *	a/ea/p1/etc	register
+ *	addr,p		index register offset
+ *	@addr,p		index register offset auto-index
+ *	addr,@p		ditto but implied sign is different TODO
+ *
+ *	There is no immediate addressing except for the direct page
+ *	JMP and JSR appear to do so but in fact are really aliases
+ *	of constant load and pli
+ *
+ *	TODO:
+ *	-	addr,@p form
+ *	-	when using ,p0 (or implied) generate PC relative relocations
+ *		for symbols
  */
-int getaddr(ADDR *ap)
+void getaddr_i(ADDR *ap)
 {
 	int c;
-	int dp = 0;
-	int con = 0;
+	unsigned dp = 0;
+	unsigned con = 0;
+	unsigned autoi = 0;
+	unsigned m;
 	ADDR a2;
 
 	ap->a_type = 0;
@@ -96,14 +124,24 @@ int getaddr(ADDR *ap)
 	a2.a_type = 0;
 	a2.a_flags = 0;
 	a2.a_sym = NULL;
-	
+
 	c = getnb();
 
-	/* #foo */	
-	if (c == '#' || c == '=') {
-		c = getnb();
+	/* =foo also allow #foo for more consistency with other targets */
+	if (c == '#' || c == '=')
 		con = 1;
-	}
+	/* :foo */
+	/* Our own syntax for DP form labels */
+	else if (c == ':')
+		dp = 1;
+	/* Auto-index tag */
+	else if (c == '@') {
+		autoi = 1;
+		c = getnb();
+	} else
+		unget(c);
+
+	c = getnb();
 	if (c == '<')
 		ap->a_flags |= A_LOW;
 	else if (c == '>')
@@ -111,47 +149,107 @@ int getaddr(ADDR *ap)
 	else
 		unget(c);
 
-	/* :foo */
-	/* Our own syntax for DP form labels */
-	if (c == ':')
-		dp = 1;
-
-	/* Auto-index tag */
-	else if (c == '@') {
-		ap->a_type |= TAUTOINDEX;
-		c = getnb();
+	expr1(ap, LOPRI, 0);
+	m = ap->a_type & TMMODE;
+	if (con) {
+		/* Constant */
+		if (m != TUSER)
+			qerr(BADMODE);
+		ap->a_type |= TIMMED;
+		return;
 	}
+	if (dp) {
+		if (m != TUSER)
+			qerr(BADMODE);
+		ap->a_type |= TDIRECT;
+		return;
+	}
+	/* Check for register */
+	if (m == TBR || m == TWR) {
+		if (dp || autoi || con)
+			qerr(BADMODE);
+		return;
+	}
+	c = getnb();
 	if (c != ',') {
-		expr1(ap, LOPRI, 0);
-
-		/* Constant or register */
-		if (con || dp || (ap->a_type & TMMODE) == TBR) {
-			constant_to_zp(ap, dp);
-			/* Autoindex requires a pointer type address */
-			if (ap->a_type & TAUTOINDEX)
-				aerr(INDNOPTR);
-			return;
-		}
-	} else {
-		/* , alone implies 0 offset */
-		ap->a_type = TUSER;
-		ap->a_value = 0;
+		unget(c);
+		/* Reg 0 relative (ie PC relative) */
+		ap->a_type |= TINDEX;
+		ap->a_type &= ~TMREG;
+		ap->a_type &= ~TMMODE;
+		ap->a_type |= TWR;
+		return;
 	}
-	/* :label does not allow pointers */
-	if (dp)
-		aerr(SYNTAX_ERROR);
-	/* Should now be followed by a pointer register */
+	/* Now an index register */
 	expr1(&a2, LOPRI, 0);
-	if ((a2.a_type & TMMODE) != TBR || (a2.a_type & TMREG) > P3)
-		aerr(INDNOPTR);
-	if (ap->a_type & AUTOINDEX && (a2.a_type & TMMREG) < P2)
-		aerr(BADAUTO);
-	/* Copy the register into the address */
+	index_required(&a2);
 	ap->a_type &= ~TMREG;
-	ap->a_type |= a2.a_value & TMREG
-	ap->a_type |= TMINDIR;
-	/* Hand back the pointer number */
-	return a2.a_value;
+	ap->a_type |= a2.a_type & TMREG;
+	ap->a_type &= ~TMADDR;
+	if (autoi)
+		ap->a_type |= TAUTOINDEX;
+	else
+		ap->a_type |= TINDEX;
+}
+
+/*
+ *	For classic addresses rather than the PC relative implied
+ *	that are used for most instruction forms
+ */
+void getaddr(ADDR *ap)
+{
+	int c;
+	unsigned m;
+
+	ap->a_type = 0;
+	ap->a_flags = 0;
+	ap->a_sym = NULL;
+
+	c = getnb();
+
+	if (c == '<')
+		ap->a_flags |= A_LOW;
+	else if (c == '>')
+		ap->a_flags |= A_HIGH;
+	else
+		unget(c);
+
+	expr1(ap, LOPRI, 0);
+}
+
+/*
+ *	Turn a pointer relative address into a relocation byte
+ *	Must be called after the opcode is written but before anything
+ *	else, so that dot is where it is expected
+ */
+
+void outptr(ADDR *ap)
+{
+	unsigned r = ap->a_type & TMREG;
+	int off;
+	/* Simple case - not PC relative */
+	if (r != 0) {
+		outrab(ap);
+		return;
+	}
+	/* We are PC relative */
+	/* Not a symbol so go with the value given as relative */
+	if (ap->a_sym == NULL) {
+		if (ap->a_segment != segment)
+			aerr(RANGE);
+		off = 0;
+	} else {
+		/* If it's another segment you lose */
+		if (ap->a_sym->s_segment != segment)
+			aerr(RANGE);
+		/* Work out the offset from the symbol value */
+		off = ap->a_sym->s_value;
+	}
+	off += ap->a_value;
+	off -= dot[segment];
+	if (off < -128 || off > 127)
+		aerr(RANGE);
+	outab(off);
 }
 
 /*
@@ -173,6 +271,8 @@ void asmline(void)
 	char id1[NCPS];
 	ADDR a1;
 	ADDR a2;
+	unsigned r, r2;
+	unsigned mode;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
@@ -183,7 +283,7 @@ loop:
 	if ((c=getnb()) == ':') {
 		sp = lookup(id, uhash, 1);
 		/* Pass 0 we compute the worst cases
-		   Pass 1 we generate according to those 
+		   Pass 1 we generate according to those
 		   Pass 2 we set them in stone (the shrinkage from pass 1
 					        allowing us a lot more)
 		   Pass 3 we output accodingly */
@@ -234,8 +334,7 @@ loop:
 		constify(&a1);
 		istuser(&a1);
 		sp = lookup(id, uhash, 1);
-		/* TODO: double check this logic and test validity */
-		/* On pass 1 we expect to see ourself in the mirror, jsut
+		/* On pass 1 we expect to see ourself in the mirror, just
 		   update the value */
 		if (pass != 1) {
 			if ((sp->s_type&TMMODE) != TNEW
@@ -246,8 +345,6 @@ loop:
 		sp->s_type |= TUSER|TMASG;
 		sp->s_value = a1.a_value;
 		sp->s_segment = a1.a_segment;
-		/* FIXME: review .equ to an external symbol/offset and
-		   what should happen */
 		goto loop;
 	}
 	unget(c);
@@ -303,6 +400,17 @@ loop:
 		unget(c);
 		break;
 
+	case TADDR:	/* Write value - 1 */
+		do {
+			getaddr(&a1);
+			constify(&a1);
+			istuser(&a1);
+			a1.a_value--;
+			outraw(&a1);
+		} while ((c=getnb()) == ',');
+		unget(c);
+		break;
+
 	case TDEFM:
 		if ((delim=getnb()) == '\n')
 			qerr(MISSING_DELIMITER);
@@ -328,49 +436,59 @@ loop:
 		break;
 	/* Has a surplus but required A register name */
 	case TAONLY:
-		getaddr(&a1);
-		if ((a1.a_type & TMMODE) != TBR &&
+		getaddr_i(&a1);
+		if ((a1.a_type & TMMODE) != TBR ||
 			(a1.a_type & TMREG) != A)
-			aerr(AREQUIRED);
+			aerr(ADDR_REQUIRED);
 		outab(opcode);
 		break;
 	/* Can be used with A or EA */
 	case TAEA:
-		getaddr(&a1);
-		if ((a1.a_type & TMMODE) != TBR)
-			aerr(AEAREQUIRED);
-		switch(a1.a_type & TMREG) {
-		case A:
+		getaddr_i(&a1);
+		mode = a1.a_type & TMMODE;
+		r = a1.a_type & TMREG;
+		if (mode == TBR && r == A)
 			outab(opcode >> 8);
-			break;
-		case EA:
+		else if (mode == TWR && r == EA)
 			outab(opcode);
-			break;
-		default:
+		else
 			aerr(AEAREQUIRED);
-		}
+		break;
+	/* Mandatory but implied EA,T */
+	case TEAT:
+		getaddr_i(&a1);
+		comma();
+		getaddr_i(&a2);
+		/* Maybe add some more clearer errors ? */
+		if ((a1.a_type & (TMMODE|TMREG)) != (TWR|EA))
+			aerr(BADMODE);
+		if ((a2.a_type & (TMMODE|TMREG)) != (TWR|T))
+			aerr(BADMODE);
+		outab(opcode);
 		break;
 	/* Stack - A EA P2 or P3 */
 	case TSTACK:
-		getaddr(&a1);
-		if ((a1.a_type & TMMODE) != TBR)
-			aerr(AEAREQUIRED);
-		switch(a1.a_type & TMREG) {
-		case EA:
-			outab(opcode);
-			break;
-		case A:
+		getaddr_i(&a1);
+		mode = a1.a_type & TMMODE;
+		r = a1.a_type & TMREG;
+		if (mode == TBR && r == A)
 			outab(opcode + 2);
-			break;
-		case P2:
-			outab((opcode >> 8) | 2);
-			break;
-		case P3:
-			outab((opcode >> 8) | 3);
-			break;
-		default:
-			aerr(AEAREQUIRED);
-		}
+		else if (mode == TWR) {
+			switch(a1.a_type & TMREG) {
+			case EA:
+				outab(opcode);
+				break;
+			case P2:
+				outab((opcode >> 8) | 2);
+				break;
+			case P3:
+				outab((opcode >> 8) | 3);
+				break;
+			default:
+				aerr(BADREG);
+			}
+		} else
+			aerr(BADREG);
 		break;
 	/* Special */
 	case TCALL:
@@ -382,154 +500,158 @@ loop:
 		outab(opcode | a1.a_value);
 		break;
 	/* Exchanges */
-	case TEXCH:
-	{
-		unsigned r1, r2;
-		getaddr(&a1);
+	case TXCH:
+		getaddr_i(&a1);
+		mode = a1.a_type & TMMODE;
 		if (getnb() != ',')
-			aerr(COMMA);
-		getaddr(&a2);
-		if ((a1.a_type & TMMODE) != TBR ||
-		    (a2.a_type & TMMODE) != TBR) {
-		    	aerr(BADREGS);
-		r1 = a1.a_type & TMREG;
+			aerr(MISSING_COMMA);
+		getaddr_i(&a2);
+
+		r = a1.a_type & TMREG;
 		r2 = a2.a_type & TMREG;
+
+		/* Byte with byte, word with word */
+		if ((a2.a_type & TMMODE) != mode)
+			aerr(BADREG);
+
 		/* Swap so we only have to check one order */
-		if (r1 > r2) {
-			unsigned tmp = r1;
-			r1 = r2;
-			r2 = tmp';
+		if (r > r2) {
+			unsigned tmp = r;
+			r = r2;
+			r2 = tmp;
 		}
-		/* Form 1 : A and E */
-		if (r1 == A && r2 == E) {
+		if (r == A && r2 == E) {
 			outab(0x01);
 			break;
-		}
-		/* Form 2: pointer and EA */
-		if (r1 <= P3 && r2 == EA) {
-			outab(0x4C + r1);
+		} else  if (r <= P3 && r2 == EA) {
+			outab(0x4C + r);
 			break;
 		}
-		aerr(BADREGS);
+		aerr(BADREG);
 		break;
-	case TBRA:
-	case TBND:
 	case TMEM8:
-		getaddr(&a1);
+		/* DLD A, addr */
+		/* ILD A, addr */
+		getaddr_i(&a1);
 		if (getnb() != ',') {
-			aerr(COMMA);
+			aerr(MISSING_COMMA);
 			break;
 		}
-		getaddr(&a2);
-		if (a1.a_type != TBR | A) {
-			aerr(AREQUIRED);
+		getaddr_i(&a2);
+		a_required(&a1);
+		index_required(&a2);
+		/* This can be indexed or autoindexed but must be a word
+		   register, or it can be direct */
+		switch(a2.a_type & TMADDR) {
+		case TINDEX:
+			outab(opcode | (a2.a_type & TMREG));
+			outptr(&a2);
 			break;
-		}
-		switch(a2.a_type & TMMODE) {
-		case TUSER|TMINDIR:
-			outab(opcode | (a2.a_type & TMMREG));
+		case TAUTOINDEX:
+			outab(opcode | (a2.a_type & TMREG) | 4);
+			outptr(&a2);
 			break;
-		case TUSER|TMINDIR|TAUTOINDEX:
-			outab(opcode | (a2.a_type & TMMREG) | 4);
-			break;
-		case  TUSER|TMINDIR|TAUTOINDEX:
-			outab(opcode | (a2.a_type & TMREG)  + 4);
+		case TDIRECT:
+			outab(opcode | 5);
+			outrab(&a2);
 			break;
 		default:
-			/* No =foo form */
-			aerr(BADREGS);
+			/* No =foo form etc */
+			aerr(BADMODE);
 			break;
 		}
 		break;
 
+		/* 8bit maths and logic */
 	case TLOGIC:
-	{
-		unsigned r1;
-		getaddr(&a1);
-		if (getnb() != ',') {
-			aerr(COMMA);
-			break;
-		}
-		getaddr(&a2);
+		getaddr_i(&a1);
+		comma();
+		getaddr_i(&a2);
+		index_required(&a2);
 		if ((a1.a_type & TMMODE) != TBR)
-			aerr(RREQUIRED);
-		r1 = a1.a_type & TMREG;
-		if (r1 != A && r1 != S)
-			aerr(BADREGS);
-		if (r1 == S) {
+			aerr(BADMODE);
+		r = a1.a_type & TMREG;
+		if (r != A && r != S)
+			aerr(BADREG);
+		if (r == S) {
 			opcode >>= 8;
 			/* Special cases */
 			if (opcode && (a2.a_type & TMMODE) == TUSER) {
 				outab(opcode);
 				break;
 			}
-			aerr(BADREGS);
+			aerr(BADREG);
 			break;
 		}
-		switch(a2.a_type & TMMODE) {
-		case TUSER:
-			if (a2.a_segment == ZP) {
-				outab(opcode + 5);
-				/* Will need linker work for the FFxx weirdness ?? */
-				outrab(&a2);
-			} else {
-				outab(opcode);
-				outrab(&a2);
-			}
+		/* Handle the special case of A, E */
+		if(r == A && (a2.a_type & (TMMODE|TMREG)) == (TBR|E)) {
+			outab(opcode & 0x7F);
 			break;
-		case TUSER|TMINDIR:
+		}
+		switch(a2.a_type & TMADDR) {
+		case TDIRECT:
+			outab(opcode + 5);
+			outrab(&a2);	/* Need to look at linker */
+			break;
+		case TINDEX:
 			outab(opcode | (a2.a_type & TMREG));
-			outab(a2.a_value);
+			outptr(&a2);
 			break;
-		case  TUSER|TMINDIR|TAUTOINDEX:
+		case  TAUTOINDEX:
 			outab(opcode | (a2.a_type & TMREG)  + 4);
+			outptr(&a2);
 			break;
-		dwefault:
-			aerr(BADADDR);
+		default:
+			aerr(BADMODE);
 		}
-	}
+		break;
+		/* Same idea for byte/word operations - uses EA */
 	case TLOGIC16:
-	{
 		/* Like tlogic but with EA forms and no S forms */
-		unsigned r1;
-		getaddr(&a1);
-		if (getnb() != ',') {
-			aerr(COMMA);
-			break;
-		}
-		getaddr(&a2);
-		if ((a1.a_type & TMMODE) != TBR)
-			aerr(RREQUIRED);
-		r1 = a1.a_type & TMREG;
-		if (r1 != A && r1 != EA)
-			aerr(BADREGS);
-		if (r1 == A)
+		getaddr_i(&a1);
+		comma();
+		getaddr_i(&a2);
+		mode = a1.a_type & TMMODE;
+		r = a1.a_type & TMREG;
+
+		if (mode != TBR && mode != TWR)
+			aerr(BADMODE);
+		if (r == A)
 			opcode >>= 8;
-		switch(a2.a_type & TMMODE) {
-		case TUSER:
-			if (a2.a_segment == ZP) {
-				outab(opcode + 5);
-				/* Will need linker work for the FFxx weirdness ?? */
-				outrab(&a2);
-			} else {
-				outab(opcode);
-				outrab(&a2);
-			}
+		else if (r != EA)
+			aerr(BADREG);
+		if(r == A && (a2.a_type & (TMMODE|TMREG)) == (TBR|E)) {
+			outab(opcode & 0x7F);
 			break;
-		case TUSER|TMINDIR:
-			outab(opcode | (a2.a_type & TMREG));
-			outab(a2.a_value);
-			break;
-		case  TUSER|TMINDIR|TAUTOINDEX:
-			outab(opcode | (a2.a_type & TMREG)  + 4);
-			break;
-		dwefault:
-			aerr(BADADDR);
 		}
-	}
+		switch(a2.a_type & TMADDR) {
+		case TIMMED:
+			outab(opcode | 4);
+			if (r == A)
+				outrab(&a2);
+			else
+				outraw(&a2);
+			break;
+		case TDIRECT:
+			outab(opcode + 5);
+			outrab(&a2);
+			break;
+		case TINDEX:
+			outab(opcode | (a2.a_type & TMREG));
+			outptr(&a2);
+			break;
+		case TAUTOINDEX:
+			outab(opcode | (a2.a_type & TMREG)  + 4);
+			outptr(&a2);
+			break;
+		default:
+			aerr(BADMODE);
+		}
+		break;
+	/* Must be P2 or P3 */
 	case TP2P3:
-		getaddr(&a1);
-		if ((a1.a_type & TMMODE) != TBR)
+		getaddr_i(&a1);
+		if ((a1.a_type & TMMODE) != TWR)
 			aerr(AEAREQUIRED);
 		switch(a1.a_type & TMREG) {
 		case P2:
@@ -542,34 +664,44 @@ loop:
 			aerr(AEAREQUIRED);
 		}
 		break;
+	/* 16bit immediate (JSR JMP) */
 	case TIMM16:
 		getaddr(&a1);
-		if (a1.a_type & TMMODE) != TUSER)
-			aerr(ADDRREQ);
+		outab(opcode);
+		a1.a_value--;	/* Offset by 1 */
 		outraw(&a1);
 		break;
+	case TPIMM16:
+		/* Used for PLI (JSR is PLI 0,n) */
+		getaddr_i(&a1);
+		index_required(&a1);
+		comma();
+		/* Unlike JSR/JMP the = is required */
+		getaddr_i(&a2);
+		if ((a2.a_type & TMADDR) != TIMMED)
+			aerr(BADMODE);
+		outab(opcode | (a1.a_type & TMREG));
+		outraw(&a2);
+		break;
 	case TLOAD:
-	{
-		unsigned r;
-		unsigned r2;
-		getaddr(&a1);
-		if ((a1.a_type & TMMODE) != TBR)
-			aerr(REGREQUIRED);
-		r = a1.a_type & TBR;
-		if (getnb() != ',')) {
-			aerr(COMMA);
-			break;
-		}
+		/* This is a wonderful mess of combinations */
+		getaddr_i(&a1);
+		mode = a1.a_type & TMMODE;
+		r = a1.a_type & TMREG;
+		if (mode != TBR && mode != TWR)
+			aerr(BADMODE);
+		comma();
 		if (r == T)
 			opcode = 0xA0;
 		else if (r == A)
 			opcode = 0xC0;
 		else if (r == EA)
-			opcode = 0x80)
+			opcode = 0x80;
+		else
+			opcode = 0x00;
 		/* If none of these opcode is 0 */
-		getaddr(&a2);
-		switch(a2.a_type & TMMODE) {
-		case TBR:
+		getaddr_i(&a2);
+		if ((a2.a_type & TMMODE) == TBR || (a2.a_type & TMMODE) == TWR) {
 			/* Register, register forms, somewhat irregular */
 			r2 = a2.a_type & TMREG;
 			if (r == A && r2 == S) {
@@ -604,121 +736,145 @@ loop:
 				outab(0x44 + r2);
 				break;
 			}
-			aerr(BADREGS);
+			aerr(BADREG);
 			break;
-		case TUSER:
-			/* Direct forms. */
-			if (a2.a_segment != ZP) {
-				if (r <= P3) {
-					outab(0x24 + r);
-					break;
-				}
-				if (r == EA) {
-					outab(0x84);
-					outraw(&a2);
-					break;
-				}
-				if (r == T) {
-					outab(0xA4);
-					outraw(&a2);
-					break;
-				}
-				if (r == A) {
-					outab(0xC4);
-					outrab(&a2);
-					break;
-				}
-				aerr(BADREGS);
-				break;
-			}
-			/* ZP form */
-			if (r == EA) {
-				outab(0x85);
+		}
+		switch(a2.a_type & TMADDR) {
+		case TIMMED:
+			/* Immediate */
+			if (r == A) {
+				outab(0xC4);
 				outrab(&a2);
 				break;
 			}
+			if (r == EA) {
+				outab(0x84);
+				outraw(&a2);
+				break;
+			}
+			/* LD P0, =nnnn is actually also JMP */
+			if (r >= P0 && r <= P3) {
+				outab(0x24 | r);
+				outraw(&a2);
+				break;
+			}
+			if (r == T) {
+				outab(0xA4);
+				outraw(&a2);
+				break;
+			}
+			aerr(BADMODE);
+			break;
+		case TINDEX:
+			if (r == A) {
+				outab(0xC0 | r2);
+				outptr(&a2);
+				break;
+			}
+			if (r == EA) {
+				outab(0x80 | r2);
+				outptr(&a2);
+				break;
+			}
+			if (r == T) {
+				outab(0xA0 | r2);
+				outptr(&a2);
+				break;
+			}
+			aerr(BADREG);
+			break;
+		case TAUTOINDEX:
+			if (r == A) {
+				outab(0xC4 | r2);
+				outptr(&a2);
+				break;
+			}
+			if (r == EA) {
+				outab(0x84 | r2);
+				outptr(&a2);
+				break;
+			}
+			if (r == T) {
+				outab(0xA0 | r2);
+				outptr(&a2);
+				break;
+			}
+			aerr(BADMODE);
+			break;
+		case TDIRECT:
+			/* Direct forms. */
 			if (r == A) {
 				outab(0xC5);
+				outrab(&a2);
+				break;
+			}
+			if (r == EA) {
+				outab(0x85);
 				outrab(&a2);
 				break;
 			}
 			if (r == T) {
 				outab(0xA5);
 				outrab(&a2);
+				break;
 			}
-			aerr(BADADDR);
-			break;
-		case TUSER|TMINDIR:
-			if (opcode == 0)
-				aerr(BADREG);
-			outab(opcode | (a2.a_type & TMREG));
-			outab(a2.a_value);
-			break;
-		case  TUSER|TMINDIR|TAUTOINDEX:
-			if (opcode == 0)
-				aerr(BADREG);
-			outab(opcode | (a2.a_type & TMREG)  + 4);
+			aerr(BADMODE);
 			break;
 		default:
-			aerr(BADADDR);
+			aerr(BADMODE);
 		}
-	}
+		break;
 	case TSTORE:
-	{
-		unsigned r;
-		getaddr(&a1);
-		if ((a1.a_type & TMMODE) != TBR)
-			aerr(REGREQUIRED);
-		r = a1.a_type & TBR;
+		/* A similar but different mix */
+		getaddr_i(&a1);
+		mode = a1.a_type & TMMODE;
+		r = a1.a_type & TMREG;
+		if (mode != TBR && mode != TWR)
+			aerr(BADMODE);
 		/* Can't store pointers, T etc */
-		if (r != A && r != EA) {
+		if (r != A && r != EA)
 			aerr(AEAREQUIRED);
 		if (r == A)
-			opcode = 0xC0;
+			opcode = 0xC8;
 		else
 			opcode = 0x88;
-		if (getnb() != ',')) {
-			aerr(COMMA);
+		if (getnb() != ',') {
+			aerr(MISSING_COMMA);
 			break;
 		}
-		getaddr(&a2);
-		switch(a2.a_type & TMMODE) {
-		case TUSER:
-			/* 8D - ZP form. No 8C would be immediate */
-			if (a2.a_segment == ZP) {
-				outab(opcode + 5);
-				/* Will need linker work for the FFxx weirdness ?? */
-				outrab(&a2);
-				break;
-			} 
-			aerr(BADADDR);
+		getaddr_i(&a2);
+		switch(a2.a_type & TMADDR) {
+		case TDIRECT:
+			outab(opcode | 5);
+			outrab(&a2);
 			break;
-		case TUSER|TMINDIR:
-			/*  88-8B */
+		case TINDEX:
 			outab(opcode | (a2.a_type & TMREG));
-			outab(a2.a_value);
+			outptr(&a2);
 			break;
-			/* 8E/8F */
-		case  TUSER|TMINDIR|TAUTOINDEX:
-			outab(opcode | (a2.a_type & TMREG)  + 4);
+		case TAUTOINDEX:
+			outab(opcode | (a2.a_type & TMREG) | 4);
+			outptr(&a2);
 			break;
 		default:
-			aerr(BADADDR);
+			aerr(BADMODE);
 		}
-	}
-		
-	case TREL8:
-		getaddr(&a1);
-		/* FIXME: do wo need to check this is constant ? */
-		disp = a1.a_value - dot[segment]-2;
-		/* Only on pass 3 do we know the correct offset for a forward branch
-		   to a label where other stuff with Jcc has been compacted */
-		if (pass == 3 && (disp<-128 || disp>127 || segment_incompatible(&a1)))
-			aerr(BRA_RANGE);
-		outab(opcode);
+		break;
+	/* This one is a bit weird. We can branch relative to any pointer (even stack!)
+	   but we need to check PC relative labels */
+	case TBRA:
+		getaddr_i(&a1);
+		index_required(&a1);
+		if ((a1.a_type & TMREG) == P0) {
+			disp = a1.a_value - dot[segment] - 2;
+			/* Only on pass 3 do we know the correct offset for a forward branch
+			   to a label where other stuff with Jcc has been compacted */
+			if (pass == 3 && (disp<-128 || disp>127 || segment_incompatible(&a1)))
+				aerr(BRA_RANGE);
+		}
+		outab(opcode | (a1.a_type & TMREG));
 		outab(disp);
 		break;
-
 	case TBRA16:	/* Relative branch or reverse and jump for range */
 
 		/* Algorithm:
@@ -733,7 +889,14 @@ loop:
 				possible shortenings because we need the
 				addresses in pass 3 to exactly match pass 2
 		*/
-		getaddr(&a1);
+		getaddr_i(&a1);
+		index_required(&a1);
+		if ((a1.a_type & TMREG) != P0) {
+			/* Not clear what the right relocation rules are */
+			outab(opcode);
+			outrab(&a1);
+			break;
+		}
 		/* disp may change between pass1 and pass2 but we know it won't
 		   get bigger so we can be sure that we still fit the 8bit disp
 		   in pass 2 if we did in pass 1 */
@@ -752,9 +915,13 @@ loop:
 				setnextrel(c);
 		}
 		if (c) {
-			outab(opcode^1);	/* Inverted branch */
-			outab(3);		/* Skip over the jump */
-			outab(0x7E);		/* Jump */
+			if (opcode != 0x74) {	/* BRA -> JMP */
+				/* We only support extending BZ and BNZ as BP and BND
+				   have no inverse */
+				outab(opcode^0x10);	/* Inverted branch */
+				outab(3);		/* Skip over the jump */
+			}
+			outab(0x24);
 			outraw(&a1);
 		} else {
 			outab(opcode);
@@ -764,7 +931,6 @@ loop:
 			outab(disp);
 		}
 		break;
-
 	default:
 		aerr(SYNTAX_ERROR);
 	}
