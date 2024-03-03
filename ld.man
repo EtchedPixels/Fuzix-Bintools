@@ -109,6 +109,15 @@
        Set the start address of the COMMONDATA segment 
 
 
+[1mUSAGE 
+[0m       Generate a Fuzix binary with symbols stripped and a map file. 
+           ld -s -o foo foo.o -m foo.map
+
+       Link the code at 0x0100 and data at 0x8000 for a ROM based application. 
+       The linker does not deal with copying, packing and unpacking data for a 
+       ROM itself. 
+           ld -b -o foo.rom -C0x0100 -D0x8000 foo.o
+
 [1mSEE ALSO 
 [0m[1m       as[0m(1), [1mdumprelocs[0m(1), [1mnm[0m(1), [1mosize[0m(1). 
 

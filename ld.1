@@ -104,5 +104,17 @@ Set the start address of the ZERO/DIRECT segment
 :*-8 addr*
 Set the start address of the COMMONDATA segment
 
+## USAGE
+Generate a Fuzix binary with symbols stripped and a map file.
+```
+ld -s -o foo foo.o -m foo.map
+```
+
+Link the code at 0x0100 and data at 0x8000 for a ROM based application. The
+linker does not deal with copying, packing and unpacking data for a ROM
+itself.
+```
+ld -b -o foo.rom -C0x0100 -D0x8000 foo.o
+```
 ## SEE ALSO
 *as*(1), *dumprelocs*(1), *nm*(1), *osize*(1).
