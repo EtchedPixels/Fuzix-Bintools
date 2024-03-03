@@ -192,10 +192,10 @@ int get(void)
 {
 	int c;
 
-	if ((c = *ip) != '\n')
+	if ((c = *ip) != '\n' && c)
 		++ip;
 	/* Lose any \r\n from confused DOS file formats */
-	if (c == '\r')
+	if (c == '\r' || c == 0)
 		return '\n';
 	return (c);
 }
@@ -212,8 +212,11 @@ int getnb(void)
 
 	while ((c = *ip)==' ' || c=='\t' || c == '\r')
 		++ip;
-	if (c != '\n')
+	if (c && c != '\n')
 		++ip;
+	/* Incomplete final line */
+	if (c == 0)
+		return '\n';
 	return (c);
 }
 
