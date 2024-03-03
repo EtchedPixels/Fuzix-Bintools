@@ -501,7 +501,7 @@ loop:
 			reg = a1.a_type & TMREG;
 			if (reg == M || reg == IX || reg == IY)
 				aerr(INVALID_REG);
-			outab(opcode << 8);
+			outab(opcode >> 8);
 			outab(opcode | (reg << 3));
 			outabchk2(&a2);
 			break;

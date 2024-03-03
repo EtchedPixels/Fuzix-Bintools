@@ -2,4 +2,4 @@ Z80 Support
 
 Official instruction set including the Z180 instructions
 
-An additional .Z180 command to specify Z180 instructions are allowed
+An additional .z180 command to specify Z180 instructions are allowed
