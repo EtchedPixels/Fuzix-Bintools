@@ -1,0 +1,108 @@
+LD (1)
+## NAME
+*ld* - binary linker
+## SYNOPSIS
+*ld* \[options\] objfile\*
+## DESCRIPTION
+Link one or more object files together to create an application, binary
+image or an output object file.
+
+The linker combines object files into an output file resolving any symbols
+and searching library files for object modules needed to resolve the
+symbols. After resolution it outputs a new file in the format requested, and
+can also generate map files if requested.
+
+For historical reasons the default output file name is "a.out"
+
+The input object files contain blocks of data destined for multiple
+different segments. The linker combines and relocates the data as needed to
+create each segment. It lays out the segments according to the addresses
+given or the ordering given or implied.
+
+Three output formats are supported. The default is a Fuzix binary format for
+user applications. It can also combine object files into a binary image, or
+into another object file according to the options specified.
+
+The segments are
+:*ABSOLUTE*
+  Data that is to be placed at the given address and not relocated. This
+  segment is not permitted in a Fuzix binary.
+:*CODE*
+  The man executable code for the program being linked.
+:*LITERAL*
+  Text strings and other read only non executable data.
+:*DATA*
+  Writeable data for the program being linked.
+:*BSS*
+  Empty space that is not included in a Fuzix binary and will be cleared to
+  zero on load. In a binary image this segment is zero filled.
+:*ZERO/DIRECT*
+  The zero page or direct page found on some processors. It is also used in
+  certain cases where a processor has a unique register space.
+:*DISCARD*
+  Code that can be discarded after the program has begun execution. Not
+  supported in a Fuzix binary.
+:*COMMON*
+  Common (unbanked) code. Used for things like the Fuzix kernel.
+:*COMMONDATA*
+  Common (unbanked) data. Used for things like the Fuzix kernel.
+:*BUFFERS*
+  Buffer space. Used for things like the Fuzix kernel.
+
+  In a split I/D system CODE, DISCARD and COMMON are placed in the I space,
+  and the other segments in the D space.
+
+  The default link order is CODE, LITERAL, DATA, BSSS, DISCARD but this can
+  be changed by command line option.
+
+## OPTIONS
+:*-b*
+Output an absolute binary image. This will be a memory image of the
+resulting linked binary starting at address 0. If split I/D is selected it
+will be followed by a memory image of the data area.
+:*-f*
+Set the order of segment linkage. Any segments without a given start address
+will be placed after the previous segment in the order given.
+:*-i*
+Generate a split I/D binary, where code and data live in their own address
+space.
+:/*-m map*
+Generate a map file 'map' as well as the linker output.
+:*-r*
+Generate a linked object file as output. The output is an object module that
+combines the object modules input. It retains relocation and symbol data so
+can itself be used as linker input.
+:*-s*
+Strip the binary of symbols if generating a Fuzix binary.
+:*-t*
+Generate a verbose trace of the linking process.
+:*-u symbol*
+Add an undefined symbol to the link to force loading of the module
+providing it.
+:*-v*
+Display the version of the linker.
+:*-A align*
+Set the alignment of segments. All segments packed together will be aligned to
+start on this alignment.
+:*-B addr*
+Set the start address of the BSS segment.
+:*-C addr*
+Set the start address of the CODE segment.
+:*-D addr*
+Set the start address of the DATA segment.
+:*-L addr*
+Set the start address of the LITERAL segment.
+:*-R file*
+Output relocation data to a file. This can be combined with the binary
+output to produce relocatable binaries in other formats if needed.
+:*-S addr*
+Set the start address of the COMMON/SHARED segment
+:*-X addr*
+Set the start address of the DISCARD segment
+:*-Z addr*
+Set the start address of the ZERO/DIRECT segment
+:*-8 addr*
+Set the start address of the COMMONDATA segment
+
+## SEE ALSO
+*as*(1), *dumprelocs*(1), *nm*(1), *osize*(1).

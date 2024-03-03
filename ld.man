@@ -1,0 +1,114 @@
+[H[JLD (1)                     Fuzix Programmer's Manual                      LD (1)
+[1mNAME 
+[0m[1m       ld[0m - binary linker 
+
+[1mSYNOPSIS 
+[0m[1m       ld[0m [options] objfile* 
+
+[1mDESCRIPTION 
+[0m       Link one or more object files together to create an application, binary 
+       image or an output object file. 
+
+       The linker combines object files into an output file resolving any 
+       symbols and searching library files for object modules needed to resolve 
+       the symbols. After resolution it outputs a new file in the format 
+       requested, and can also generate map files if requested. 
+
+       For historical reasons the default output file name is "a.out" 
+
+       The input object files contain blocks of data destined for multiple 
+       different segments. The linker combines and relocates the data as needed 
+       to create each segment. It lays out the segments according to the 
+       addresses given or the ordering given or implied. 
+
+       Three output formats are supported. The default is a Fuzix binary format 
+       for user applications. It can also combine object files into a binary 
+       image, or into another object file according to the options specified. 
+
+       The segments are 
+[1m       ABSOLUTE[0m 
+           Data that is to be placed at the given address and not relocated. 
+           This segment is not permitted in a Fuzix binary. 
+[1m       CODE[0m 
+           The man executable code for the program being linked. 
+[1m       LITERAL[0m 
+           Text strings and other read only non executable data. 
+[1m       DATA[0m 
+           Writeable data for the program being linked. 
+[1m       BSS[0m 
+           Empty space that is not included in a Fuzix binary and will be 
+           cleared to zero on load. In a binary image this segment is zero 
+           filled. 
+[1m       ZERO/DIRECT[0m 
+           The zero page or direct page found on some processors. It is also 
+           used in certain cases where a processor has a unique register space. 
+[1m       DISCARD[0m 
+           Code that can be discarded after the program has begun execution. 
+           Not supported in a Fuzix binary. 
+[1m       COMMON[0m 
+           Common (unbanked) code. Used for things like the Fuzix kernel. 
+[1m       COMMONDATA[0m 
+           Common (unbanked) data. Used for things like the Fuzix kernel. 
+[1m       BUFFERS[0m 
+           Buffer space. Used for things like the Fuzix kernel. 
+
+           In a split I/D system CODE, DISCARD and COMMON are placed in the I 
+           space, and the other segments in the D space. 
+
+           The default link order is CODE, LITERAL, DATA, BSSS, DISCARD but 
+           this can be changed by command line option. 
+
+
+[1mOPTIONS 
+[0m[1m       -b[0m 
+       Output an absolute binary image. This will be a memory image of the 
+       resulting linked binary starting at address 0. If split I/D is selected 
+       it will be followed by a memory image of the data area. 
+[1m       -f[0m 
+       Set the order of segment linkage. Any segments without a given start 
+       address will be placed after the previous segment in the order given. 
+[1m       -i[0m 
+       Generate a split I/D binary, where code and data live in their own 
+       address space. 
+       /[1m-m map[0m 
+       Generate a map file 'map' as well as the linker output. 
+[1m       -r[0m 
+       Generate a linked object file as output. The output is an object module 
+       that combines the object modules input. It retains relocation and symbol 
+       data so can itself be used as linker input. 
+[1m       -s[0m 
+       Strip the binary of symbols if generating a Fuzix binary. 
+[1m       -t[0m 
+       Generate a verbose trace of the linking process. 
+[1m       -u symbol[0m 
+       Add an undefined symbol to the link to force loading of the module 
+       providing it. 
+[1m       -v[0m 
+       Display the version of the linker. 
+[1m       -A align[0m 
+       Set the alignment of segments. All segments packed together will be 
+       aligned to start on this alignment. 
+[1m       -B addr[0m 
+       Set the start address of the BSS segment. 
+[1m       -C addr[0m 
+       Set the start address of the CODE segment. 
+[1m       -D addr[0m 
+       Set the start address of the DATA segment. 
+[1m       -L addr[0m 
+       Set the start address of the LITERAL segment. 
+[1m       -R file[0m 
+       Output relocation data to a file. This can be combined with the binary 
+       output to produce relocatable binaries in other formats if needed. 
+[1m       -S addr[0m 
+       Set the start address of the COMMON/SHARED segment 
+[1m       -X addr[0m 
+       Set the start address of the DISCARD segment 
+[1m       -Z addr[0m 
+       Set the start address of the ZERO/DIRECT segment 
+[1m       -8 addr[0m 
+       Set the start address of the COMMONDATA segment 
+
+
+[1mSEE ALSO 
+[0m[1m       as[0m(1), [1mdumprelocs[0m(1), [1mnm[0m(1), [1mosize[0m(1). 
+
