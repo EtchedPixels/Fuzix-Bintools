@@ -422,9 +422,7 @@ loop:
 		/* OP R,IMM */
 		else if (ta1 == TREG && ta2 == TIMMED)
 			outab(opcode | 0x06);
-		/* OP @R,IMM */
-		else if (ta1 == TIND && ta2 == TIMMED)
-			outab(opcode | 0x07);
+		/* no @r,IMM format on the Super 8 */
 		else
 			qerr(INVALID_FORM);
 		/* Immediate is backwards to the others */
