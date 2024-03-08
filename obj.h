@@ -31,6 +31,7 @@ struct objhdr
 #define OA_INS8070	10
 #define OA_WARREX	11
 #define OA_BYTE		12	/* Bytecode */
+#define OA_6809		13
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */
@@ -61,9 +62,15 @@ struct objhdr
 #define OA_6800_6303	2
 #define OA_6800_68HC11	4
 
+#define OA_Z8_BASE	1	/* Define 1 for each form as they all conflict */
+#define OA_Z8_SUPER	2
+#define OA_Z8_EZ8	4
+
 #define OA_TMS9900_9995 1	/* TMS 9995 */
 
 #define OA_WARREX_CPU6	1
+
+#define OA_6809_6309	1
 
     uint16_t o_unused;		/* So it packs right */
     uint32_t o_segbase[OSEG];
