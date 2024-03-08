@@ -775,7 +775,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TIMM8	0x1600			/* Only used for SRP */
 #define TIRRDA	0x1700			/* For CALL */
 #define TRA	0x1800			/* Relative address */
-#define TLDC	0x1900			/* LDC (r,Irr  / Irr, Ir ) */
+#define TLDC	0x1900			/* LDC (r,Irr  / Irr, r ) */
 #define TLDCI	0x1A00			/* LDCI (Ir,Irr / Irr, Ir) */
 #define TLOAD	0x1B00			/* 12 forms.. */
 
@@ -807,6 +807,112 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define	SEGMENT_CLASH	27
 #define ODD_REGISTER	28
 #define TOOMANYJCC	29
+
+#elif TARGET_SUPER8
+
+typedef	uint16_t	VALUE;		/* For symbol values */
+
+#define ARCH OA_Z8
+#define ARCH_FLAGS OF_BIGENDIAN
+#define ARCH_CPUFLAGS OA_Z8_SUPER
+
+#define TARGET_BIGENDIAN
+
+/*
+ * Types. These are used
+ * in both symbols and in address
+ * descriptions. Observe the way the
+ * symbol flags hide in the register
+ * field of the address.
+ */
+#define	TMREG	0x000F			/* Register code */
+#define	TMMDF	0x0001			/* Multidef */
+#define	TMASG	0x0002			/* Defined by "=" */
+#define	TMMODE	0xFF00			/* Mode */
+#define	TMINDIR	0x8000			/* Indirect flag in mode */
+#define TPUBLIC	0x0080			/* Exported symbol */
+#define TMADDR	0x00F0			/* Addressing mode bits */
+
+#define TRS	0x0010			/* Register, short form */
+#define TREG	0x0020			/* Register */
+#define TIMMED	0x0030			/* Immediate */
+#define TSIND	0x0040			/* Register short indirect */
+#define TIND	0x0050			/* Indrect */
+#define TRR	0x0060			/* Register pair */
+#define TRRIND	0x0070			/* Register pair indirect */
+#define TINDEX	0x0080			/* value is followed by (xx) */
+
+#define	TNEW	0x0000			/* Virgin */
+#define	TUSER	0x0100			/* User name */
+#define	TBR	0x0200			/* Byte register */
+#define	TWR	0x0300			/* Word register */
+#define	TSR	0x0400			/* Special register (I, R) */
+#define	TDEFB	0x0500			/* defb */
+#define	TDEFW	0x0600			/* defw */
+#define	TDEFS	0x0700			/* defs */
+#define	TDEFM	0x0800			/* defm */
+#define	TORG	0x0900			/* org */
+#define	TEQU	0x0A00			/* equ */
+#define	TCOND	0x0B00			/* conditional */
+#define	TENDC	0x0C00			/* end conditional */
+#define TSEGMENT 0x0D00			/* segments by number */
+#define TEXPORT 0x0E00			/* symbol export */
+#define TCC	0x0F00
+/* CPU specific codes */
+#define TIMPL	0x1000			/* Implicit */
+#define TOP4BIT	0x1100			/* 4bit + mode */
+#define TRIR	0x1200			/* R or IR mode */
+#define TRRIR	0x1300			/* RR or IR mode */
+#define TCRA	0x1400			/* JR CC, rel */
+#define TJMP	0x1500			/* JP cc,DA + JP cc,IRR */
+#define TIMM8	0x1600			/* Only used for SRP */
+#define TIRRDA	0x1700			/* For CALL */
+#define TRA	0x1800			/* Relative address */
+#define TLDC	0x1900			/* LDC (r,Irr  / Irr, r ) */
+#define TLDCI	0x1A00			/* LDCI r,Irr */
+#define TLOAD	0x1B00			/* 12 forms.. */
+#define TBIT	0x1C00			/* Bit ops */
+#define TBITX	0x1D00			/* Bit ops with low bit mod */
+#define TBJMP	0x1E00			/* Bit test and jump */
+#define TCALL	0x1F00			/* Call ops */
+#define TIMM8M	0x2000			/* Immediates with op bits in data */
+#define TPUSHU	0x2100			/* pushu forms */
+#define TPOPU	0x2200			/* popu forms */
+#define TMULDIV	0x2300			/* mul and div forms */
+#define TCPIJ	0x2400			/* compare inc and jump */
+#define TLDW	0x2500			/* ldw forms */
+#define TBCP	0x2600			/* bcp */
+#define TLDCPI	0x2700			/* LDCPI Irr,r */
+
+/*
+ *	Error message numbers
+ */
+
+#define BRACKET_EXPECTED 1
+#define MISSING_COMMA	2
+#define SQUARE_EXPECTED 3
+#define PERCENT_EXPECTED 4
+#define UNEXPECTED_CHR	10
+#define PHASE_ERROR	11
+#define MULTIPLE_DEFS	12
+#define SYNTAX_ERROR	13
+#define MUST_BE_ABSOLUTE	14
+#define MISSING_DELIMITER 15
+#define INVALID_CONST	16
+#define BRA_RANGE	17
+#define RSHORT_RANGE	18
+#define ADDR_REQUIRED	19
+#define INVALID_ID	20
+#define INVALID_FORM	21
+#define DIVIDE_BY_ZERO	22
+#define CONSTANT_RANGE  23
+#define DATA_IN_BSS	24
+#define SEGMENT_OVERFLOW 25
+#define DATA_IN_ZP	26
+#define	SEGMENT_CLASH	27
+#define ODD_REGISTER	28
+#define TOOMANYJCC	29
+#define BITRANGE	30
 
 #elif TARGET_1802
 

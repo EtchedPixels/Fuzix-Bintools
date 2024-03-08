@@ -11,7 +11,8 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
 
 test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       asnova ldnova nmnova osizenova dumprelocsnova \
-      as8070 ld8070 nm8070 osize8070 dumprelocs8070
+      as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
+      assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
 
 todo: as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
       as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
@@ -207,6 +208,21 @@ osizez8: $(HDR) osize.c
 dumprelocsz8: $(HDR) dumprelocs.o
 	cc -o dumprelocsz8 dumprelocs.o
 
+assuper8: $(HDR) $(CORE) as1-super8.c as6-super8.c
+	cc  -DTARGET_SUPER8 -o assuper8 $(CORE) as1-super8.c as6-super8.c
+
+ldsuper8: $(HDR) ld.c
+	cc -o ldsuper8 ld.c
+
+nmsuper8: $(HDR) nm.c
+	cc -o nmsuper8 nm.c
+
+osizesuper8: $(HDR) osize.c
+	cc -o osizesuper8 osize.c
+
+dumprelocssuper8: $(HDR) dumprelocs.o
+	cc -o dumprelocssuper8 dumprelocs.o
+
 asz80: $(HDR) $(CORE) as1-z80.c as6-z80.c
 	cc  -DTARGET_Z80 -o asz80 $(CORE) as1-z80.c as6-z80.c
 
@@ -236,6 +252,7 @@ clean:
 	rm -f asee200 ldee200 nmee200 osizeee200 dumprelocsee200
 	rm -f asnova ldnova nmnova osizenova dumprelocsnova
 	rm -f aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
+	rm -f assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8
 	rm -f asz8 ldz8 nmz8 osizez8 dumprelocsz8
 	rm -f asz80 ldz80 nmz80 osizez80 dumprelocsz80
 	rm -f reloc
@@ -260,6 +277,7 @@ installtest: test
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp asnova ldnova nmnova osizenova dumprelocsnova $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
+	cp assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 $(CCROOT)/bin
 
 #	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
 #	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin
