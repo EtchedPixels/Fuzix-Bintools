@@ -608,7 +608,7 @@ loop:
 		ta1 = a1.a_type & TMADDR;
 		if (ta1 == TRRIND)
 			ta1 = unshort_reg(&a1);
-		if ((a1.a_type & TMADDR) == TIND) {
+		if (ta1 == TIND) {
 			if (cc != 0x08)
 				qerr(INVALID_FORM);
 			check_pair(&a1);
