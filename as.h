@@ -745,7 +745,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TIMMED	0x0030			/* Immediate */
 #define TSIND	0x0040			/* Register short indirect */
 #define TIND	0x0050			/* Indrect */
-#define TRR	0x0060			/* Register pair */
+#define TRRS	0x0060			/* Register pair */
 #define TRRIND	0x0070			/* Register pair indirect */
 #define TINDEX	0x0080			/* value is followed by (xx) */
 
