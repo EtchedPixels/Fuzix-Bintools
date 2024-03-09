@@ -691,7 +691,6 @@ loop:
 		getaddr_r(&a2);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
-		printf("ta1 %x ta2 %x\n", ta1, ta2);
 		/* r,@rr */
 		if (ta1 == TRS && ta2 == TRRIND) {
 			outab(0xC3);
@@ -1050,7 +1049,6 @@ loop:
 			ta1 = unshort_reg(&a1);
 		if (ta1 == TREG && ta2 == TREG) {
 			check_pair(&a1);
-			check_pair(&a2);
 			outab(opcode);
 			outrab(&a2);
 			outrab(&a1);
