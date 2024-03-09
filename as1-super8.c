@@ -277,8 +277,15 @@ void check_pair(ADDR *ap)
 		aerr(ODD_REGISTER);
 }
 
+/* Generate two byte sized link records. This is a bit of a back */
 void outraw_backwards(ADDR *ap)
 {
+	ap->a_flags |= A_LOW;
+	outrab(ap);
+	ap->a_flags &= ~A_LOW;
+	ap->a_flags |= A_HIGH;
+	outrab(ap);
+	ap->a_flags &= ~A_HIGH;
 }
 
 void not_reg01(ADDR *ap)
