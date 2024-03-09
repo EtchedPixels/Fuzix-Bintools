@@ -838,9 +838,10 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TIMMED	0x0030			/* Immediate */
 #define TSIND	0x0040			/* Register short indirect */
 #define TIND	0x0050			/* Indrect */
-#define TRR	0x0060			/* Register pair */
+#define TRRS	0x0060			/* Register pair (rrn)*/
 #define TRRIND	0x0070			/* Register pair indirect */
 #define TINDEX	0x0080			/* value is followed by (xx) */
+#define TRROFF	0x0090			/* nnnn(@rr) */
 
 #define	TNEW	0x0000			/* Virgin */
 #define	TUSER	0x0100			/* User name */
@@ -913,6 +914,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define ODD_REGISTER	28
 #define TOOMANYJCC	29
 #define BITRANGE	30
+#define NOTREG01	31
 
 #elif TARGET_1802
 

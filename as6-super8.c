@@ -132,7 +132,7 @@ SYM	sym[] = {
 	{	0,	"btjrf",	TBJMP,		0x0037	},
 	{	0,	"btjrt",	TBJMP,		0x0137	},
 	{	0,	"ldb",		TBIT,		0x47	},
-	{	0,	"bitc",		TBIT,		0x57	},
+	{	0,	"bitc",		TBITX,		0x57	},
 	{	0,	"band",		TBIT,		0x67	},
 	{	0,	"bitr",		TBITX,		0x0077	},
 	{	0,	"bits",		TBITX,		0x0177	},
@@ -144,8 +144,8 @@ SYM	sym[] = {
 
 	/* The less regular bits */
 	{	0,	"srp",		TIMM8M,		0x0031	},
-	{	0,	"srp",		TIMM8M,		0x0031	},
-	{	0,	"srp",		TIMM8M,		0x0031	},
+	{	0,	"srp0",		TIMM8M,		0x0231	},
+	{	0,	"srp1",		TIMM8M,		0x0131	},
 
 	/* Call has a weird mix of scattered forms */
 	{	0,	"call",		TCALL,		0xD4	},
@@ -161,7 +161,7 @@ SYM	sym[] = {
 	{	0,	"div",		TMULDIV,	0x94	},
 	/* Compare inc branch */
 	{	0,	"cpije",	TCPIJ,		0xC2	},
-	{	0,	"cjijne",	TCPIJ,		0xD2	},
+	{	0,	"cpijne",	TCPIJ,		0xD2	},
 
 	{	0,	"ldcd",		TLDCI,		0x00E2	},
 	{	0,	"lded",		TLDCI,		0x01E2	},
@@ -223,7 +223,8 @@ char *etext[] = {
 	"segment conflict",		/* 27 */
 	"register must be even",	/* 28 */
 	"too manj jr instructions",	/* 29 */
-	"invalid bit number"		/* 30 */
+	"invalid bit number",		/* 30 */
+	"register may not be 0 or 1"	/* 31 */
 };
 
 /*

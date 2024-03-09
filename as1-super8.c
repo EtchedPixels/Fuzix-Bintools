@@ -74,9 +74,11 @@ static int segment_incompatible(ADDR *ap)
  * RRn - register pair short form
  * @Rn - register, indirect short form
  * @RRn - register pair, indirect short form
- * n - register
+ * n - register (sometimes implied constant DA)
  * @n - register indirect
  * #n - 8bit constant
+ *
+ * The implied DA ambiguity is a pain
  */
 void getaddr_r(ADDR *ap)
 {
@@ -125,6 +127,10 @@ void getaddr_r(ADDR *ap)
 			qerr(SYNTAX_ERROR);
 		if (ap->a_value < 0 || ap->a_value > 15)
 			aerr(RSHORT_RANGE);
+		/* Set TMREG */
+		ap->a_type |= ap->a_value;
+		/* No offset */
+		ap->a_value = 0;
 		if (pair == 0) {
 			if (indirect)
 				ap->a_type |= TSIND;
@@ -134,9 +140,9 @@ void getaddr_r(ADDR *ap)
 			if (indirect)
 				ap->a_type |= TRRIND;
 			else {
-				if (ap->a_value & 1)
+				if (ap->a_type & 1)
 					aerr(ODD_REGISTER);
-				ap->a_type |= TRR;
+				ap->a_type |= TRRS;
 			}
 		}
 		return;
@@ -148,23 +154,25 @@ void getaddr_r(ADDR *ap)
 
 	expr1(ap, LOPRI, 1);
 
-	/* Must be an 8bit result */
-	if (!(ap->a_flags & (A_HIGH|A_LOW)) && (ap->a_value < -128 || ap->a_value > 255))
-		qerr(CONSTANT_RANGE);
 	c = getnb();
 	if (c == '(') {
 		ADDR tmp;
-		ap->a_type = TINDEX;
+		unsigned tt;
 		if (indirect)
 			aerr(INVALID_FORM);
-		getaddr(&tmp);
-		if ((tmp.a_type & TMADDR) != TRS)
+		getaddr_r(&tmp);
+		tt = tmp.a_type & TMADDR;
+		if (tt != TRS && tt != TRRS)
 			qerr(RSHORT_RANGE);
 		c = getnb();
 		if (c != ')')
 			qerr(SYNTAX_ERROR);
-		ap->a_value &= 0xFF;
-		ap->a_value |= (tmp.a_value << 8);	/* Hackish */
+		ap->a_type &= ~(TMREG | TMADDR);
+		ap->a_type |= tmp.a_type & TMREG;	/* Insert register */
+		if (tt == TRS)
+			ap->a_type |= TINDEX;
+		else
+			ap->a_type |= TRROFF;
 	} else {
 		unget(c);
 		if (indirect)
@@ -174,11 +182,46 @@ void getaddr_r(ADDR *ap)
 	}
 }
 
+#define T_REG(x)	((x)->a_type & TMREG)
+
+/* Unshorten a register form */
+unsigned unshort_reg(ADDR *ap)
+{
+	unsigned t = ap->a_type & TMADDR;
+	if (t == TRS) {
+		ap->a_value = (ap->a_type & TMREG) | 0xC0;
+		ap->a_type &= ~TMADDR;
+		ap->a_type |= TREG;
+		return TREG;
+	} else if (t == TRRS) {
+		ap->a_value = (ap->a_type & TMREG) | 0xC0;
+		ap->a_type &= ~TMADDR;
+		ap->a_type |= TREG;
+		return TREG;
+	} else if (t == TSIND) {
+		ap->a_value = (ap->a_type & TMREG) | 0xC0;
+		ap->a_type &= ~TMADDR;
+		ap->a_type |= TIND;
+		return TIND;
+	} else if (t == TRRIND) {
+		ap->a_value = (ap->a_type & TMREG) | 0xC0;
+		ap->a_type &= ~TMADDR;
+		ap->a_type |= TIND;
+		return TIND;
+	} else
+		return ap->a_type & TMADDR;
+}
+
+void check_8bit(ADDR *ap)
+{
+	if (!(ap->a_flags & (A_HIGH|A_LOW)) && (ap->a_value < -128 || ap->a_value > 255))
+		aerr(CONSTANT_RANGE);
+}
+
 void getaddr8(ADDR *ap)
 {
 	getaddr_r(ap);
-	if (!(ap->a_flags & (A_HIGH|A_LOW)) && (ap->a_value < -128 || ap->a_value > 255))
-		aerr(CONSTANT_RANGE);
+	check_8bit(ap);
 }
 		
 int getcond(ADDR *ap)
@@ -206,10 +249,46 @@ void getaddr(ADDR *ap)
 	ap->a_type |= TIMMED;
 }
 
-int bit_range(ADDR *ap)
+void bit_range(ADDR *ap)
 {
-	if ((ap->a_type & TMADDR) != TREG || ap->a_value < 0 | ap->a_value > 7)
+	if ((ap->a_type & TMADDR) != TIMMED || ap->a_value < 0 || ap->a_value > 7)
 		aerr(BITRANGE);
+}
+
+/* Must be a constant - will be seen as a reg form */
+void check_ra(ADDR *ap)
+{
+	unsigned t = ap->a_type & TMADDR;
+	if (t != TREG && t != TIMMED)
+		aerr(INVALID_FORM);
+}
+
+/* Direct address */
+void check_da(ADDR *ap)
+{
+	unsigned t = ap->a_type & TMADDR;
+	if (t != TREG && t != TIMMED)
+		aerr(INVALID_FORM);
+}
+
+void check_pair(ADDR *ap)
+{
+	if (ap->a_value & 1)
+		aerr(ODD_REGISTER);
+}
+
+void outraw_backwards(ADDR *ap)
+{
+}
+
+void not_reg01(ADDR *ap)
+{
+	if ((ap->a_type & TMADDR) != TRS) {
+		aerr(INVALID_FORM);
+		return;
+	}
+	if (T_REG(ap) < 2)
+		aerr(NOTREG01);
 }
 
 /*
@@ -386,32 +465,18 @@ loop:
 		/* Short forms are  dest << 4 | soure  */
 		if (ta1 == TRS && ta2 == TRS) {
 			outab(opcode | 0x02);
-			outab((a1.a_value << 4) | a2.a_value);
+			outab((T_REG(&a1) << 4) | T_REG(&a2));
 			break;
 		}
 		/* OP r,Ir */
 		if (ta1 == TRS && ta2 == TSIND) {
 			outab(opcode | 0x03);
-			outab((a1.a_value << 4) | a2.a_value);
+			outab((T_REG(&a1) << 4) | T_REG(&a2));
 			break;
 		}
 		/* Look for long forms using 0xC0 for current reg set */
-		if (ta1 == TRS) {
-			a1.a_value |= 0xC0;
-			ta1 = TREG;
-		}
-		if (ta1 == TSIND) {
-			a1.a_value |= 0xC0;
-			ta1 = TIND;
-		}
-		if (ta2 == TRS) {
-			a2.a_value |= 0xC0;
-			ta2 = TREG;
-		}
-		if (ta2 == TSIND) {
-			a2.a_value |= 0xC0;
-			ta2 = TIND;
-		}
+		ta1 = unshort_reg(&a1);
+		ta2 = unshort_reg(&a2);
 		/* Long forms  are src, dst except when the are not (sigh)*/
 		/* OP R,R */
 		if (ta1 == TREG && ta2 == TREG)
@@ -443,16 +508,15 @@ loop:
 		getaddr8(&a1);
 		switch(a1.a_type & TMADDR) {
 		case TRS:
-		case TRR:
-			a1.a_value |= 0xC0;
+		case TRRS:
+			unshort_reg(&a1);
 		case TREG:
-			if (a1.a_value & 1)
-				aerr(ODD_REGISTER);
+			check_pair(&a1);
 			outab(opcode);
 			break;
 		case TSIND:
 		case TRRIND:
-			a1.a_value |= 0xC0;
+			unshort_reg(&a1);
 		case TIND:
 			outab(opcode + 0x01);
 			break;
@@ -467,17 +531,17 @@ loop:
 		switch(a1.a_type & TMADDR) {
 		case TRS:
 			if (opcode == 0x20) {	/* INC has an r form */
-				opcode = 0x0E | (a1.a_value << 4);
+				opcode = 0x0E | (T_REG(&a1) << 4);
 				outab(opcode);
 				break;
 			}
-			a1.a_value |= 0xC0;
+			unshort_reg(&a1);
 		case TREG:
 			outab(opcode);
 			outrab(&a1);
 			break;
 		case TSIND:
-			a1.a_value |= 0xC0;
+			unshort_reg(&a1);
 		case TIND:
 			outab(opcode + 0x01);
 			outrab(&a1);
@@ -506,6 +570,7 @@ loop:
 			getaddr(&a1);
 		} else
 			cc = 0x08; /* True */
+		check_ra(&a1);
 		disp = a1.a_value - dot[segment] - 2;
 		if (pass == 3)
 			c = getnextrel();
@@ -531,37 +596,47 @@ loop:
 		}
 		break;
 	case TJMP:
-		getaddr(&a1);
+		getaddr_r(&a1);
 		cc = getcond(&a1);
 		if (cc != -1) {
 			c = getnb();
 			if (c != ',')
 				qerr(MISSING_DELIMITER);
-			getaddr(&a1);
+			getaddr_r(&a1);
 		} else
 			cc = 0x08; /* True */
-		if ((a1.a_type & TMADDR) == TRRIND) {
+		ta1 = a1.a_type & TMADDR;
+		if (ta1 == TRRIND)
+			ta1 = unshort_reg(&a1);
+		if ((a1.a_type & TMADDR) == TIND) {
 			if (cc != 0x08)
 				qerr(INVALID_FORM);
+			check_pair(&a1);
 			/* JP @RR */
 			outab(0x30);
 			outrab(&a1);
 		} else {
+			check_da(&a1);
 			outab(opcode + (cc << 4));
 			/* Relocatable label */
 			outraw(&a1);
 		}
 		break;
-		
 	case TCALL:	/* Call */
-		getaddr(&a1);
+		getaddr_r(&a1);
 		ta1 = a1.a_type & TMADDR;
-		if (ta1 == TRRIND) {
-			/* CALL @RR */
+		if (ta1 == TRRIND)
+			ta1 = unshort_reg(&a1);
+		if (ta1 == TIMMED) {
+			/* Weird form call #n is a call to the address found
+			   at the 8bit location pair given (akin to Z80 RST) */
 			outab(0xD4);
+			check_8bit(&a1);
 			outrab(&a1);
 			break;
-		} else if (ta1 == TRRIND) {
+		} else if (ta1 == TIND) {
+			/* CALL @RR */
+			check_pair(&a1);
 			outab(0xF4);
 			outrab(&a1);
 			break;
@@ -569,6 +644,7 @@ loop:
 			/* Actually in this case just a value */
 			outab(0xF6);
 			/* Relocatable label */
+			check_da(&a1);
 			outraw(&a1);
 			break;
 		}
@@ -582,14 +658,15 @@ loop:
 		c = getnb();
 		if (c != ',')
 			qerr(MISSING_DELIMITER);
-		outab(0x0A | (a1.a_value << 4));
+		outab(0x0A | (T_REG(&a1) << 4));
 		/* And then a relative address */
+		/* TODO: Check from of rel addr */
 		getaddr(&a2);
+		check_ra(&a2);
 		a2.a_value -= dot[segment] + 1;
 		outrabrel(&a2);
 		break;
 	case TLDC:
-		/* TODO: all the new forms */
 		/* r, Irr */
 		/* Irr, r */
 		/* r, xs(rr) */
@@ -598,23 +675,73 @@ loop:
 		/* xl(rr), r - not r0/1 */
 		/* r, da */
 		/* da, r */
-		getaddr8(&a1);
+		/* These forms store 16bit values little endian so we will
+		   need a reverse endian relocation */
+		getaddr_r(&a1);
 		c = getnb();
 		if (c != ',')
 			qerr(MISSING_DELIMITER);
-		getaddr8(&a2);
+		getaddr_r(&a2);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
+		printf("ta1 %x ta2 %x\n", ta1, ta2);
+		/* r,@rr */
 		if (ta1 == TRS && ta2 == TRRIND) {
-			outab(opcode);
-			outab((a1.a_value << 4) | a2.a_value | (opcode >> 8));
-			/* dst, src */
-		} else if (ta1 == TRRIND && ta2 == TRS) {
-			/* dst, src */
-			outab(opcode + 0x10);
-			outab((a2.a_value << 4) | a1.a_value | (opcode >> 8));
-		} else
-			qerr(INVALID_FORM);
+			outab(0xC3);
+			outab((T_REG(&a1) << 4) | T_REG(&a2) | (opcode >> 8));
+			break;
+		}
+		/* @rr,r */
+		if (ta1 == TRRIND && ta2 == TRS) {
+			outab(0xD3);
+			outab((T_REG(&a1) << 4) | T_REG(&a2) | (opcode >> 8));
+			break;
+		}
+		/* r xx(rr) */
+		if (ta1 == TRS && ta2 == TRROFF) {
+			not_reg01(&a1);
+			if (a2.a_value < 256) {
+				outab(0xE7);
+				outab((T_REG(&a1) << 4) | T_REG(&a2) | (opcode >> 8));
+				outrab(&a2);
+				break;
+			}
+			outab(0xA7);
+			outab((T_REG(&a1) << 4) | T_REG(&a2) | (opcode >> 8));
+			outraw_backwards(&a2);
+			break;
+		}
+		/* xx(rr), r */
+		if (ta1 == TRROFF && ta2 == TRS) {
+			not_reg01(&a2);
+			if (a1.a_value < 256) {
+				outab(0xF7);
+				outab((T_REG(&a2) << 4) | T_REG(&a1) | (opcode >> 8));
+				outrab(&a1);
+				break;
+			}
+			outab(0xB7);
+			outab((T_REG(&a1) << 4) | T_REG(&a2) | (opcode >> 8));
+			outraw_backwards(&a1);
+			break;
+		}
+		/* r, da */
+		if (ta1 == TRS && ta2 == TREG) {
+			outab(0xA7);
+			outab((T_REG(&a1) << 4) | (opcode >> 8));
+			check_da(&a2);
+			outraw_backwards(&a2);
+			break;
+		}
+		/* da, r */
+		if (ta1 == TREG && ta2 == TRS) {
+			outab(0xB7);
+			outab((T_REG(&a2) << 4) | (opcode >> 8));
+			check_da(&a1);
+			outraw_backwards(&a1);
+			break;
+		}
+		qerr(INVALID_FORM);
 		break;
 	case TLDCI:
 		/* post dec and post inc are r,@rr **/
@@ -628,7 +755,7 @@ loop:
 		if (ta1 == TRS && ta2 == TRRIND) {
 			/* dst, src */
 			outab(opcode);
-			outab((a1.a_value << 4) | a2.a_value | (opcode >> 8));
+			outab((T_REG(&a1) << 4) | T_REG(&a2) | (opcode >> 8));
 		} else
 			qerr(INVALID_FORM);
 		break;
@@ -644,7 +771,7 @@ loop:
 		if (ta1 == TRRIND && ta2 == TRS) {
 			/* dst, src */
 			outab(opcode);
-			outab((a2.a_value << 4) | a1.a_value | (opcode >> 8));
+			outab((T_REG(&a2) << 4) | T_REG(&a1) | (opcode >> 8));
 		} else
 			qerr(INVALID_FORM);
 		break;
@@ -660,21 +787,21 @@ loop:
 		/* Now encode the load by type */
 		/* LD r0,#1 */
 		if (ta1 == TRS && ta2 == TIMMED) {
-			outab(0x0C | (a1.a_value << 4));
+			outab(0x0C | (T_REG(&a1) << 4));
 			outrab(&a2);
 			break;
 		}
 		/* LD r0,sp */
 		if (ta1 == TRS && ta2 == TREG) {
 			/* dst|mode , src */
-			outab(0x08 | (a1.a_value << 4));
+			outab(0x08 | (T_REG(&a1) << 4));
 			outrab(&a2);
 			break;
 		}
 		/* LD sp, r0 */
 		if (ta1 == TREG && ta2 == TRS) {
 			/* src|mode , dst */
-			outab(0x09 | (a2.a_value << 4));
+			outab(0x09 | (T_REG(&a2) << 4));
 			outrab(&a1);
 			break;
 		}
@@ -682,58 +809,45 @@ loop:
 		if (ta1 == TRS && ta2 == TSIND) {
 			/* mode | 3 , dst | src */
 			outab(0xC7);
-			outab((a1.a_value << 4) | (a2.a_value));
+			outab((T_REG(&a1) << 4) | T_REG(&a2));
 			break;
 		}
 		/* LD @r0,r1 */
 		if (ta1 == TSIND && ta2 == TRS) {
 			/* mode | 3 , dst | src */
 			outab(0xD7);
-			outab((a1.a_value << 4) | (a2.a_value));
+			outab((T_REG(&a1) << 4) | T_REG(&a2));
 			break;
 		}
 		if (ta1 == TRS && ta2 == TINDEX) {
 			/* op , dst | x, offset */
 			outab(0x87);
-			outab((a1.a_value << 4) | (a2.a_value >> 8));
-			a2.a_value &= 0xFF;
+			outab((T_REG(&a1) << 4) | T_REG(&a2));
 			outrab(&a2);
 			break;
 		}
 		if (ta1 == TINDEX && ta2 == TRS) {
 			/* op , src | x, offset */
 			outab(0x97);
-			outab((a1.a_value >>  8) | (a2.a_value << 4));
-			a1.a_value &= 0xFF;
+			outab(T_REG(&a1) | (T_REG(&a2) << 4));
 			outrab(&a1);
 			break;
 		}
 		/* Partial short form. Turn r,r into r,R not R,R */
 		if (ta1 == TRS && ta2 == TRS) {
-			outab(0x08 | a1.a_value << 4);
-			outab(a2.a_value | 0xC0);
+			outab(0x08 | (T_REG(&a1) << 4));
+			unshort_reg(&a2);
+			outab(a2.a_value);
 			break;
 		}
 		/* If we get here in short form we need to try the long
 		   form alias */
-		if (ta1 == TRS) {
-			ta1 = TREG;
-			a1.a_value |= 0xC0;
-		}
-		if (ta2 == TRS) {
-			ta2 = TREG;
-			a2.a_value |= 0xC0;
-		}
 		/* FIXME these two are probably wrong on Z8 classic
 		   check ld in general */
-		if (ta1 == TSIND) {
-			ta1 = TIND;
-			a1.a_value |= 0xC0;
-		}
-		if (ta2 == TSIND) {
-			ta2 = TIND;
-			a2.a_value |= 0xC0;
-		}
+		if (ta1 == TRS || ta1 == TSIND)
+			ta1 = unshort_reg(&a1);
+		if (ta2 == TRS || ta2 == TSIND)
+			ta2 = unshort_reg(&a2);
 		if (ta1 == TREG && ta2 == TREG) {
 			/* op, src, dst */
 			outab(0xE4);
@@ -776,31 +890,32 @@ loop:
 		comma();
 		getaddr8(&a2);
 		comma();
-		getaddr(&a3);
+		getaddr8(&a3);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
 		ta3 = a3.a_type & TMADDR;
 		/* dst,src,b */
-		if (ta3 == TREG && ta1 == TRS) {
+		if (ta3 == TIMMED && ta1 == TRS) {
 			bit_range(&a3);
 			if (ta2 == TRS)
-				a2.a_value |= 0xC0;
+				unshort_reg(&a2);
 			else if (ta2 != TREG)
 				qerr(INVALID_FORM);
 			outab(opcode);
-			outab((a1.a_value << 4) | (a3.a_value << 1));
+			outab((T_REG(&a1) << 4) | (a3.a_value << 1));
 			outrab(&a2);
 			break;
 		}
 		/* dst,b,src */
-		if (ta2 == TREG && ta3 == TRS) {
+		if (ta2 == TIMMED && ta3 == TRS) {
 			bit_range(&a2);
 			if (ta1 == TRS)
-				a1.a_value |= 0xC0;
-			else if(ta2 != TREG)
+				unshort_reg(&a1);
+			else if(ta1 != TREG)
 				qerr(INVALID_FORM);
 			outab(opcode);
-			outab((a3.a_value << 4) | (a2.a_value << 1) |  1);
+			outab((T_REG(&a3) << 4) | (a2.a_value << 1) |  1);
+			outrab(&a1); 
 			break;
 		}
 		qerr(INVALID_FORM);
@@ -811,19 +926,19 @@ loop:
 		comma();
 		getaddr8(&a2);
 		comma();
-		getaddr(&a3);
+		getaddr8(&a3);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
 		ta3 = a3.a_type & TMADDR;
-		/* dst,src,b */
-		if (ta3 == TREG && ta1 == TRS) {
+		/* dst,src,#b */
+		if (ta3 == TIMMED && ta1 == TRS) {
 			bit_range(&a3);
 			if (ta2 == TRS)
-				a2.a_value |= 0xC0;
+				unshort_reg(&a2);
 			else if (ta2 != TREG)
 				qerr(INVALID_FORM);
 			outab(opcode);
-			outab((a1.a_value << 4) | (a3.a_value << 1));
+			outab((T_REG(&a1) << 4) | (a3.a_value << 1));
 			outrab(&a2);
 			break;
 		}
@@ -839,7 +954,7 @@ loop:
 		bit_range(&a2);
 		if (ta1 == TRS) {
 			outab(opcode & 0xFF);
-			outab((a1.a_value << 4) | (a2.a_value << 1) | (opcode >> 8));
+			outab((T_REG(&a1) << 4) | (a2.a_value << 1) | (opcode >> 8));
 			break;
 		}
 		qerr(INVALID_FORM);
@@ -852,15 +967,11 @@ loop:
 		comma();
 		getaddr8(&a3);
 		ta2 = a2.a_type & TMADDR;
-		ta3 = a3.a_type & TMADDR;
-		if (ta1 == TRS) {
-			a1.a_value |= 0xC0;
-			ta1 = TREG;
-		}
 		bit_range(&a3);
-		if (ta1 == TREG && ta2 == TRS) {
+		check_ra(&a1);
+		if (ta2 == TRS) {
 			outab(opcode & 0xFF);
-			outab((a2.a_value << 4) | (a3.a_value << 1) | (opcode >> 8));
+			outab((T_REG(&a2) << 4) | (a3.a_value << 1) | (opcode >> 8));
 			a1.a_value -= dot[segment] + 1;
 			outrabrel(&a1);
 			break;
@@ -888,10 +999,10 @@ loop:
 		getaddr8(&a2);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
-		if (ta2 == TRS) {
-			a2.a_value |= 0xC0;
-			ta2 = TREG;
-		}
+		if (ta2 == TRS)
+			ta2 = unshort_reg(&a2);
+		if (ta1 == TSIND)
+			ta1 = unshort_reg(&a1);
 		if (ta1 == TIND && ta2 == TREG) {
 			outab(opcode);
 			outrab(&a1);
@@ -906,10 +1017,10 @@ loop:
 		getaddr8(&a2);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
-		if (ta1 == TRS) {
-			a1.a_value |= 0xC0;
-			ta1 = TREG;
-		}
+		if (ta1 == TRS)
+			ta1 = unshort_reg(&a1);
+		if (ta2 == TSIND)
+			ta2 = unshort_reg(&a2);
 		if (ta1 == TREG && ta2 == TIND) {
 			outab(opcode);
 			outrab(&a2);
@@ -925,24 +1036,29 @@ loop:
 		getaddr8(&a2);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
-		if (a2.a_type = TRS) {
-			a2.a_value |= 0xC0;
-			ta2 = TREG;
-		}
-		if (ta1 == TRR && ta2 == TREG) {
+
+		if (ta2 == TRS || ta2 == TSIND)
+			ta2 = unshort_reg(&a2);
+		if (ta1 == TRRS)
+			ta1 = unshort_reg(&a1);
+		if (ta1 == TREG && ta2 == TREG) {
+			check_pair(&a1);
+			check_pair(&a2);
 			outab(opcode);
 			outrab(&a2);
 			outrab(&a1);
 			break;
 		}
-		if (ta1 == TRR && ta2 == TIND) {
+		if (ta1 == TREG && ta2 == TIND) {
+			check_pair(&a1);
 			outab(opcode + 1);
 			outrab(&a2);
 			outrab(&a1);
 			break;
 		}
-		if (ta1 == TRR && ta2 == TIMMED) {
-			outab(opcode + 1);
+		if (ta1 == TREG && ta2 == TIMMED) {
+			check_pair(&a1);
+			outab(opcode + 2);
 			outrab(&a2);
 			outrab(&a1);
 			break;
@@ -955,15 +1071,14 @@ loop:
 		comma();
 		getaddr8(&a2);
 		comma();
-		/* TODO: RA into a3 */
 		getaddr(&a3);
+		check_ra(&a3);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
-		comma();
-		if (ta1 != TRS || ta2 != TRS || ta3 != TREG)
+		if (ta1 != TRS || ta2 != TRS)
 			qerr(INVALID_FORM);
 		outab(opcode);
-		outab((a2.a_value << 4) | a1.a_value);
+		outab((T_REG(&a2) << 4) | T_REG(&a1));
 		/* And then a relative address */
 		a3.a_value -= dot[segment] + 1;
 		outrabrel(&a3);
@@ -973,38 +1088,31 @@ loop:
 		/* dst,b */
 		getaddr8(&a1);
 		comma();
-		getaddr(&a2);
+		getaddr_r(&a2);
 		ta1 = a1.a_type & TMADDR;
 		ta2 = a2.a_type & TMADDR;
-		if (ta1 == TRS) {
-			a1.a_value |= 0xC0;
-			ta1 = TREG;
-		}
-		if (ta2 == TRS) {
-			a2.a_value |= 0xC0;
-			ta2 = TREG;
-		}
-		if (ta1 == TSIND) {
-			a1.a_value |= 0xC0;
-			ta1 = TIND;
-		}
-		if (ta2 == TSIND) {
-			a2.a_value |= 0xC0;
-			ta2 = TIND;
-		}
+		if (ta1 == TRRS || ta1 == TSIND)
+			ta1 = unshort_reg(&a1);
+		if (ta2 == TRRS || ta2 == TSIND)
+			ta2 = unshort_reg(&a2);
 		if (ta1 == TREG && ta2 == TREG) {
+			check_8bit(&a1);
+			check_8bit(&a2);
 			outab(0xC4);
 			outrab(&a1);
 			outrab(&a2);
 			break;
 		}
 		if (ta1 == TREG && ta2 == TIND) {
+			check_8bit(&a1);
+			check_8bit(&a2);
 			outab(0xC5);
 			outrab(&a1);
 			outrab(&a2);
 			break;
 		}
 		if (ta1 == TREG && ta2 == TIMMED) {
+			check_8bit(&a1);
 			outab(0xC6);
 			outrab(&a1);
 			outraw(&a2);
