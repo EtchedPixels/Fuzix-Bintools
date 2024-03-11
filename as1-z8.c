@@ -569,7 +569,23 @@ loop:
 		}
 		break;
 	case TJMP:
-		getaddr_r(&a1);
+		c = getnb();
+		unget(c);
+		if (c == '@') {
+			getaddr_r(&a1);
+			ta1 = a1.a_type & TMADDR;
+			if (ta1 == TRRIND)
+				ta1 = unshort_reg(&a1);
+			if (ta1 == TIND) {
+				check_pair(&a1);
+				outab(0x30);
+				outrab(&a1);
+				break;
+			}
+			qerr(INVALID_FORM);
+			break;
+		}
+		getaddr(&a1);
 		cc = getcond(&a1);
 		if (cc != -1) {
 			c = getnb();
@@ -578,22 +594,10 @@ loop:
 			getaddr_r(&a1);
 		} else
 			cc = 0x08; /* True */
-		ta1 = a1.a_type & TMADDR;
-		if (ta1 == TRRIND)
-			ta1 == unshort_reg(&a1);
-		if (ta1 == TIND) {
-			if (cc != 0x08)
-				qerr(INVALID_FORM);
-			check_pair(&a1);
-			/* JP @RR */
-			outab(0x30);
-			outrab(&a1);
-		} else {
-			check_da(&a1);
-			outab(opcode + (cc << 4));
-			/* Relocatable label */
-			outraw(&a1);
-		}
+		check_da(&a1);
+		outab(opcode + (cc << 4));
+		/* Relocatable label */
+		outraw(&a1);
 		break;
 		
 	case TIRRDA:	/* Call */
