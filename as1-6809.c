@@ -68,9 +68,8 @@ static void constant_to_dp(ADDR *ap)
  *	and also because we need it for excg/tfr/psh/pop
  */
 
-unsigned parse_register(void)
+unsigned parse_register(unsigned c)
 {
-	unsigned c = getnb();
 	if (c == 'a')
 		return TBR|A;
 	if (c == 'b')
@@ -102,7 +101,7 @@ unsigned parse_register(void)
 
 void index_required(ADDR *ap)
 {
-	if ((ap->a_type & TMADDR) != TWR ||
+	if ((ap->a_type & TMMODE) != TWR ||
 		(ap->a_type & TMREG) == D) {
 		qerr(NEED_INDEX);
 	}
@@ -110,7 +109,7 @@ void index_required(ADDR *ap)
 
 void prepost_required(ADDR *ap)
 {
-	if ((ap->a_type & TMADDR) != TWR || 
+	if ((ap->a_type & TMMODE) != TWR ||
 		(ap->a_type & TMREG) == D ||
 		(ap->a_type & TMREG) == PCR) {
 		qerr(NEED_PREPOST);
@@ -162,7 +161,7 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 	/* Immediate */
 	if (c == '#') {
 		c = getnb();
-		if (c == '<') 
+		if (c == '<')
 			ap->a_flags |= A_LOW;
 		else if (c == '>')
 			ap->a_flags |= A_HIGH;
@@ -190,12 +189,11 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 	if (c == '@') {
 		dp = 1;
 		c = getnb();
-	}
-	else if (c == '[') {
+	} else if (c == '[') {
 		indirect = 1;
 		c = getnb();
 	}
-	if (c != ',') {
+	if (dp || c != ',') {
 		/* Get the expression */
 		if (c == '<')
 			ap->a_flags |= A_LOW;
@@ -206,7 +204,6 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 		expr1(ap, LOPRI, 0);
 		if (dp) {
 			ap->a_type |= TDIR;
-			unget(c);
 			return;
 		}
 		c = getnb();
@@ -243,28 +240,33 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 	if (c == '-' && !hasleft && type == TINDEX) {
 		predec = 1;
 		c = getnb();
-		if (c == '-')
+		if (c == '-') {
 			predec++;
-		else
-			unget(c);
+			c = getnb();
+		}
 	}
 	/* now a register name or PC */
-	ap->a_type |= parse_register();
+	ap->a_type |= parse_register(c);
 
 	c = getnb();
 	if (c == '+' && !hasleft && !predec && type == TINDEX) {
 		postinc = 1;
 		c = getnb();
-		if (c == '+')
+		if (c == '+')  {
 			postinc = 2;
-		else
-			unget(c);
+			c = getnb();
+		}
 	}
 	if (indirect) {
-		c = getnb();
 		if (c != ']')
 			qerr(NEED_CLSQUARE);
-	}
+	} else
+		unget(c);
+
+	if (postinc || predec)
+		prepost_required(ap);
+	else
+		index_required(ap);
 	/* TODO: byte++ --byte indirect is not legal */
 	/* Now put together the address descriptor */
 	/* Set up the TMADDR bits */
@@ -280,20 +282,16 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 		ap->a_type |= TPOST2;
 	else
 		ap->a_type |= type;
-	if (postinc || predec)
-		prepost_required(ap);
-	else
-		index_required(ap);
 }
 
 void getaddr_r(ADDR *ap)
 {
-	return getaddr_op(ap, 1);
+	return getaddr_op(ap, 0);
 }
 
 void getaddr(ADDR *ap)
 {
-	return getaddr_op(ap, 0);
+	return getaddr_op(ap, 1);
 }
 
 unsigned is_indexed(ADDR *ap)
@@ -317,17 +315,33 @@ unsigned is_postbyte(ADDR *ap)
 	return 0;
 }
 
+/* Turn an internal register representation into an RR encoding */
+unsigned map_register(unsigned r)
+{
+	if (r == X)
+		return 0x00;
+	if (r == Y)
+		return 0x20;
+	if (r == U)
+		return 0x40;
+	if (r == S)
+		return 0x60;
+	/* Other forms are not an error we just won't be using RR */
+	return 0xFF;	/* So bugs show */
+}
+
 /* Write out the post byte and data */
 void write_data(ADDR *ap, unsigned size)
 {
 	unsigned t = ap->a_type & (TMADDR | TMINDIR);
-	unsigned r = (ap->a_type & TMREG) << 5;
+	unsigned r = map_register(ap->a_type & TMREG);
 	/* TODO: PC relative symbols for ,PCR */
 	if (t == TIMMED) {
 		if (size == 1)
 			outrab(ap);
 		else
 			outraw(ap);
+		return;
 	}
 	if (t == TDIR) {
 		outrab(ap);
@@ -349,6 +363,7 @@ void write_data(ADDR *ap, unsigned size)
 		outraw(ap);
 		return;
 	}
+	/* TODO: pre/post must match size */
 	if (t == TPOST1) {
 		outab(0x80 | r);
 		return;
@@ -371,24 +386,31 @@ void write_data(ADDR *ap, unsigned size)
 	}
 	if (t == (TMINDIR|TPRE2)) {
 		outab(0x93 | r);
+		return;
 	}
 	if (t == TINDEXA) {
 		outab(0x86 | r);
+		return;
 	}
 	if (t == TINDEXB) {
 		outab(0x85 | r);
+		return;
 	}
 	if (t == TINDEXD) {
 		outab(0x8B | r);
+		return;
 	}
 	if (t == (TMINDIR|TINDEXA)) {
 		outab(0x96 | r);
+		return;
 	}
-	if (t == (TMINDIR|TINDEXB)) { 
+	if (t == (TMINDIR|TINDEXB)) {
 		outab(0x95 | r);
+		return;
 	}
 	if (t == (TMINDIR|TINDEXD)) {
 		outab(0x9B | r);
+		return;
 	}
 	if (t == (TMINDIR|TEXT)) {
 		outab(0x9F);
@@ -399,22 +421,27 @@ void write_data(ADDR *ap, unsigned size)
 }
 
 /* The 80-FF space is highly regular */
-void encode_high_op(unsigned opcode, ADDR *ap, unsigned size, unsigned has_imm)
+void encode_high_op(unsigned opcode, unsigned size, unsigned has_imm)
 {
-	unsigned ta1 = ap->a_type & TMADDR;
+	ADDR a1;
+	unsigned ta1;
+
+	getaddr_r(&a1);
+
+	ta1 = a1.a_type & TMADDR;
 	if (opcode >> 8)
 		outab(opcode >> 8);
 	if (ta1 == TIMMED && has_imm)
 		outab(opcode);
 	else if (ta1 == TDIR)
 		outab(opcode + 0x10);
-	else if (is_postbyte(ap))
+	else if (is_postbyte(&a1))
 		outab(opcode + 0x20);
 	else if (ta1 == TEXT)
 		outab(opcode + 0x30);
 	else
 		qerr(INVALID_FORM);
-	write_data(ap, size);
+	write_data(&a1, size);
 }
 
 /*
@@ -614,16 +641,16 @@ loop:
 		write_data(&a1, 2);
 		break;
 	case THI:	/* Byte sized operation with immediate */
-		encode_high_op(opcode, &a1, 1, 1);
+		encode_high_op(opcode, 1, 1);
 		break;
 	case THIW:	/* Word sized operation with immediate */
-		encode_high_op(opcode, &a1, 1, 1);
+		encode_high_op(opcode, 2, 1);
 		break;
 	case THINOIMM:	/* Byte sized with no immediate (eg stores) */
-		encode_high_op(opcode, &a1, 1, 0);
+		encode_high_op(opcode, 1, 0);
 		break;
 	case THIWNOIMM:	/* Word sized with no immediate (eg stores) */
-		encode_high_op(opcode, &a1, 2, 0);
+		encode_high_op(opcode, 2, 0);
 		break;
 	case TIMM8:	/* 8bit immediate - cwait, and/orcc */
 		getaddr(&a1);
