@@ -1638,6 +1638,7 @@ extern void outabchk2(ADDR *);
 extern void outraw(ADDR *);
 extern void outrab(ADDR *);
 extern void outrabrel(ADDR *);
+extern void outrawrel(ADDR *);
 extern void outeof(void);
 extern void outbyte(uint8_t);
 extern void outflush(void);

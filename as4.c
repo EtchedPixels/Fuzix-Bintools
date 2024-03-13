@@ -333,6 +333,28 @@ void outrabrel(ADDR *a)
 	outab2(v);
 }
 
+void outrawrel(ADDR *a)
+{
+	int16_t v = (int16_t)a->a_value;
+	check_store_allowed(segment, 1);
+	if (a->a_sym) {
+		outbyte(REL_ESC);
+		outbyte((0 << 4 ) | REL_PCREL);
+		outbyte(a->a_sym->s_number & 0xFF);
+		outbyte(a->a_sym->s_number >> 8);
+		outabyte(a->a_value);
+		outbyte(a->a_value >> 8);
+		return;
+	}
+#ifdef TARGET_BIGENDIAN
+	outabyte(a->a_value >> 8);
+	outabyte(a->a_value);
+#else
+	outabyte(a->a_value);
+	outabyte(a->a_value >> 8);
+#endif
+}
+
 static void putsymbol(SYM *s, FILE *ofp)
 {
 	uint8_t flag = 0;

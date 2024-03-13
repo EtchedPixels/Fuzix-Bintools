@@ -588,27 +588,26 @@ loop:
 		for (value = 0 ; value < a1.a_value; value++)
 			outab(0);
 		break;
-#if 0
 	case TBRA:
-		/* FIXME: sort out symbols here and on 6502 */
-		getaddr(&a1, NULL, 0);
+		/* TODO: sort of lbxx extension */
+		getaddr(&a1);
 		disp = a1.a_value-dot[segment]-2;
 		if (disp<-128 || disp>127 || a1.a_segment != segment)
 			aerr(BRA_RANGE);
 		outab(opcode);
-		outab(disp);
+		outrabrel(&a1);
 		break;
-
 	case TLBRA:
-		/* FIXME: support this with symbols */
-		getaddr(&a1, NULL, 0);
-		disp = a1.a_value-dot[segment]-2;
-		if (disp<-32768 || disp> 32767 || a1.a_segment != segment)
+		getaddr(&a1);
+		if (a1.a_segment != segment)
 			aerr(BRA_RANGE);
+		if (opcode >> 8)
+			outab(opcode >> 8);
 		outab(opcode);
-		outab(disp);
+		a1.a_value -= dot[segment];
+		a1.a_value -= 2;
+		outrawrel(&a1);
 		break;
-#endif
 	/* No following data. Instruction may be one or two bytes long */
 	case TIMP:
 		if (opcode >> 8)
