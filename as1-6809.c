@@ -1,10 +1,43 @@
 /*
- * Z-80 assembler.
+ * 6809 assembler.
  * Assemble one line of input.
  * Knows all the dirt.
  */
 #include	"as.h"
 
+/*
+ * CPU specific pass setup
+ */
+
+static int cputype;
+/* FIXME: we should malloc/realloc this on non 8bit machines */
+static uint8_t reltab[1024];
+static unsigned int nextrel;
+
+int passbegin(int pass)
+{
+	cputype = 6800;
+	segment = 1;		/* Default to code */
+	if (pass == 3)
+		nextrel = 0;
+	return 1;		/* All passes required */
+}
+
+static void setnextrel(int flag)
+{
+	if (nextrel == 8 * sizeof(reltab))
+		aerr(TOOMANYJCC);
+	if (flag)
+		reltab[nextrel >> 3] |= (1 << (nextrel & 7));
+	nextrel++;
+}
+
+static unsigned int getnextrel(void)
+{
+	unsigned int n = reltab[nextrel >> 3] & (1 << (nextrel & 7));
+	nextrel++;
+	return n;
+}
 
 /*
  * Deal with the syntactic mess 6809 assembler has
@@ -31,6 +64,60 @@ static void constant_to_dp(ADDR *ap)
 }
 
 /*
+ *	Parse a register. We do this by hand due to the ++/-- formats etc
+ *	and also because we need it for excg/tfr/psh/pop
+ */
+
+unsigned parse_register(void)
+{
+	unsigned c = getnb();
+	if (c == 'a')
+		return TBR|A;
+	if (c == 'b')
+		return TBR|B;
+	if (c == 'd')
+		return TWR|D;
+	if (c == 's')
+		return TWR|S;
+	if (c == 'u')
+		return TWR|U;
+	if (c == 'x')
+		return TWR|X;
+	if (c == 'y')
+		return TWR|Y;
+	if (c != 'p') {
+		unget(c);
+		return 0;
+	}
+	c = getnb();
+	if (c != 'c') {
+		qerr(NEED_REGISTER);
+		return 0;
+	}
+	c = getnb();
+	if (c != 'r')
+		unget(c);
+	return TWR|PCR;
+}
+
+void index_required(ADDR *ap)
+{
+	if ((ap->a_type & TMADDR) != TWR ||
+		(ap->a_type & TMREG) == D) {
+		qerr(NEED_INDEX);
+	}
+}
+
+void prepost_required(ADDR *ap)
+{
+	if ((ap->a_type & TMADDR) != TWR || 
+		(ap->a_type & TMREG) == D ||
+		(ap->a_type & TMREG) == PCR) {
+		qerr(NEED_PREPOST);
+	}
+}
+
+/*
  * Read in an address
  * descriptor, and fill in
  * the supplied "ADDR" structure
@@ -38,22 +125,57 @@ static void constant_to_dp(ADDR *ap)
  * Exits directly to "qerr" if
  * there is no address field or
  * if the syntax is bad.
+ *
+ * The 6809 has a bunch of addressing modes we need to decode
+ *
+ * Immediate:  #constant
+ * Postbyte for EXG/TFR/PSH/PUL - handled separately
+ * Direct @foo   (usually >foo but that is ambiguous with our upper
+ *		  and lower forms)
+ * Indexed  {const},[XYUS]
+ * Accumulator offset: [ABD],[XYUS]
+ * Autoinc byte   ,[XYUS]+
+ * Autoinc word   ,[XYUS]++
+ * Autodec byte   ,[XYUS]+
+ * Autodec word   ,[XYUS]++
+ * Indirected forms of the above for all except immediate
+ * PC relative	{const},PC
  */
-uint8_t getaddr(ADDR *ap, uint8_t *extbyte, uint8_t size)
+
+void getaddr_op(ADDR *ap, unsigned noreg)
 {
-	int c;
-	ADDR tmp;
-	ADDR off;
+	unsigned indirect = 0;
+	unsigned predec = 0;
+	unsigned postinc = 0;
+	unsigned hasleft = 0;	/* was a left side to indexed from */
+	unsigned dp = 0;
+	unsigned type;
+	unsigned reg;
+	unsigned c;
 
 	ap->a_type = 0;
 	ap->a_flags = 0;
 	ap->a_sym = NULL;
-	
+
 	c = getnb();
 
 	/* Immediate */
 	if (c == '#') {
 		c = getnb();
+		if (c == '<') 
+			ap->a_flags |= A_LOW;
+		else if (c == '>')
+			ap->a_flags |= A_HIGH;
+		else
+			unget(c);
+		expr1(ap, LOPRI, 0);
+		istuser(ap);
+		ap->a_type |= TIMMED;
+		return;
+	}
+
+	/* Request for constants only (eg defb) */
+	if (noreg) {
 		if (c == '<')
 			ap->a_flags |= A_LOW;
 		else if (c == '>')
@@ -62,184 +184,237 @@ uint8_t getaddr(ADDR *ap, uint8_t *extbyte, uint8_t size)
 			unget(c);
 		expr1(ap, LOPRI, 0);
 		istuser(ap);
-		return size;
-	}
-	
-	/* [xx] */
-	if (c == '[') {
-		getaddr_sub(ap, extbyte, size);
-		c = getnb();
-		if (c != ']')
-			err('s', SQUARE_EXPECTED);
-		if ((ap->ap_type & TADDR) == TAEXT) {
-			if (!(*extbyte & 0x80)) {
-				/* Convert from 5bit to 8bit */
-				size = 1;
-				*extbyte &= 0x60;
-				*extbyte |= 0x88;	/* 8 bit offset */
-			}
-			c = (*extbyte & 0x9F);
-			/* Not allowed to indirect a - / + just -- and ++ */
-			if (c == 0x80 || c == 0x82)
-				err('a', INVALID_INDIR);
-			*extbyte |= 0x10;
-			ap->a_type |= TAEXT|TMINDIR;
-			return size;
-		}
+		ap->a_type |= TEXT;
 		return;
 	}
-	unget(c);
-	getaddr_sub(ap, extbyte, size, &off);
+	if (c == '@') {
+		dp = 1;
+		c = getnb();
+	}
+	else if (c == '[') {
+		indirect = 1;
+		c = getnb();
+	}
+	if (c != ',') {
+		/* Get the expression */
+		if (c == '<')
+			ap->a_flags |= A_LOW;
+		else if (c == '>')
+			ap->a_flags |= A_HIGH;
+		else
+			unget(c);
+		expr1(ap, LOPRI, 0);
+		if (dp) {
+			ap->a_type |= TDIR;
+			unget(c);
+			return;
+		}
+		c = getnb();
+		/* [addr] */
+		if (c == ']' && indirect) {
+			/* off is in fact the result but indirected */
+			ap->a_type |= TEXT|TMINDIR; /* Set indirect addr bit */
+			return;
+		}
+		/* Not an indirection */
+		if (c != ',') {
+			ap->a_type |= TEXT;
+			unget(c);
+			return;
+		}
+		hasleft = 1;
+	}
+
+	type = TINDEX;
+
+	/* A, B, D, forms are awkward as we now have two registers. Fudge
+	   it to fit the standard formats */
+	if (ap->a_type & (TMADDR|TMREG) == (TBR|A))
+		type = TINDEXA;
+	else if (ap->a_type & (TMADDR|TMREG) == (TBR|A))
+		type = TINDEXB;
+	else if (ap->a_type & (TMADDR|TMREG) == (TBR|A))
+		type = TINDEXD;
+
+	/* We can't just throw the right hand side at the expression
+	   parser because it's full of + and - but not an expression so
+	   we do it by hand */
+	c = getnb();
+	if (c == '-' && !hasleft && type == TINDEX) {
+		predec = 1;
+		c = getnb();
+		if (c == '-')
+			predec++;
+		else
+			unget(c);
+	}
+	/* now a register name or PC */
+	ap->a_type |= parse_register();
+
+	c = getnb();
+	if (c == '+' && !hasleft && !predec && type == TINDEX) {
+		postinc = 1;
+		c = getnb();
+		if (c == '+')
+			postinc = 2;
+		else
+			unget(c);
+	}
+	if (indirect) {
+		c = getnb();
+		if (c != ']')
+			qerr(NEED_CLSQUARE);
+	}
+	/* TODO: byte++ --byte indirect is not legal */
+	/* Now put together the address descriptor */
+	/* Set up the TMADDR bits */
+	if (indirect)
+		ap->a_type |= TMINDIR;
+	if (predec == 1)
+		ap->a_type |= TPRE1;
+	else if (predec == 2)
+		ap->a_type |= TPRE2;
+	else if (postinc == 1)
+		ap->a_type |= TPOST1;
+	else if (postinc == 2)
+		ap->a_type |= TPOST2;
+	else
+		ap->a_type |= type;
+	if (postinc || predec)
+		prepost_required(ap);
+	else
+		index_required(ap);
 }
 
-/*
- *	Perform the main work of decoding modes that can be direct or
- *	indrected
- */
-uint8_t getaddr_sub(ADDR *ap, uint8_t *extbyte, ADDR *off)
+void getaddr_r(ADDR *ap)
 {
-	int reg;
-	int c;
-	ADDR tmp;
-	ADDR off;
-	int index = 0;
+	return getaddr_op(ap, 1);
+}
 
-	/* ,foo is the same as 0,foo */	
-	off.a_type = TUSER;
-	off.a_value = 0;
+void getaddr(ADDR *ap)
+{
+	return getaddr_op(ap, 0);
+}
 
-	/* We need to decode
-	
-		reg, reg
-		offset,reg
-		address
-		dp:address
-		autodec(2) reg
-		reg autoinc(2)
-		offset,pc
-	 */
-	c =  getnb();
-	if (c != ',') {
-		/* The left of the comma can be a constant or A/B/D register */
-		unget(c);
-		expr1(&off, LOPRI, 0);
-		ireg = reg_expr(ap);
-		if (reg != -1) {
-			if (ireg != A || ireg != B || ireg != D)
-				error(INVALID_REGISTER);
-			index = 2;
-			/* We are doing reg,index */
-		} else { /* Must be a constant */
-			istuser(&off);
-			if (ap->a_value != 0)
-				index = 1;
-			c = get();
-			if (c != ',') {
-				/* Extended or DP addressing - lda foo */
-				unget(c);
-				/* FIXME figure out extbyte etc  */
-				ap->a_type = TUSER;
-				ap->a_value = off.a_value;
-				ap->a_sym = off.a_sym;
-				ap->a_segment = off.a_segment;
-				return;
-			}
-			unget(c);
-		}
-		comma();
-	}
+unsigned is_indexed(ADDR *ap)
+{
+	unsigned ta = ap->a_type & (TMADDR | TMINDIR);
+	if (ta != TINDEX && ta != TINDEXA && ta != TINDEXB && ta != TINDEXD)
+		return 1;
+	return 0;
+}
 
-	/* Afer the comma should be a register but it may have a - -- prefix */	
-	c = getnb();
-	if (c == '-') {
-		if (index)
-			aerr(BAD_MODE);
-		extop = 0x82;
-		c = get();
-		if (c == '-')
-			extop = 0x83;
-		else
-			unget(c);
-	} else
-		unget(c);
-
-	/* Compute the expression that follows. Should be a register  */
-	expr1(ap, LOPRI, 1);
-
-	reg = reg_expr(ap);
-	if (reg == -1)
-		aerr(BAD_MODE);
-	c = get();
-	if (c == '+') {
-		if (extop || index)	
-			aerr(BAD_MODE);
-		c = get();
-		extop = 0x81;
-		if (c == '+')
-			extop = 0x80;
-		else
-			unget(c);
-	} else
-		unget(c);
-
-	if (index == 2) {
-		/* encode a/b/d, reg */
-		switch(ireg)
-		{
-			case A:
-				*extbyte = 0x86;
-				break;
-			case B:
-				*extbyte = 0x85;
-				break;
-			case D:
-				*extbyte = 0x8B;
-				break;
-			default:
-				qerr(SYNTAX_ERROR);
-		}
-		*extbyte |= toindex(reg);
+unsigned is_postbyte(ADDR *ap)
+{
+	unsigned ta = ap->a_type & TMADDR;
+	if (ta >= TINDEX)
+		return 1;
+	if (ta != TEXT)
 		return 0;
-	}
-	if (extop) {
-		/* No offset with increment/decrement */	
-		if (index)
-			aerr(BAD_MDOE);
-		/* --/-/+/++ */
-		*extbyte = extop | toindex(reg);
-		return 0;
-	}
-	/* Simple offset. Only it's not so simple because it might be a
-	   symbol that is external. In which case we must assume the worst
-	   FIXME: check this logic works for TNEW */
+	/* [ext] is a postbyte form */
+	if (ap->a_type & TMINDIR)
+		return 1;
+	return 0;
+}
 
-	if (ap->a_segment != ABSOLUTE)
-		off = ap->a_value - dot[segment];
-
-	/* Is this a relocation that we can compute te value of ? */
-	if (ap->a_sym == NULL || (ap->a_type & TMMODE) == TUSER) {
-		/* Is it within our segment or absolute */
-		if (ap->a_segment == segment || ap->a_segment == ABSOLUTE) {
-			/* In which case we can actually use the short forms */
-			if (reg != PCR && offset5bit(off)) {
-				*extbyte = offset5bit(off)|toindex(reg);
-				return 0;
-			}
-			if (offset8bit(off)) {
-				if (reg == PCR)
-					*extbyte = 0x8C;
-				else
-					*extbyte = 0x88 | toindex(reg);
-				return 1;
-			}
-		}
+/* Write out the post byte and data */
+void write_data(ADDR *ap, unsigned size)
+{
+	unsigned t = ap->a_type & (TMADDR | TMINDIR);
+	unsigned r = (ap->a_type & TMREG) << 5;
+	/* TODO: PC relative symbols for ,PCR */
+	if (t == TIMMED) {
+		if (size == 1)
+			outrab(ap);
+		else
+			outraw(ap);
 	}
-	/* Otherwise we use the long form to be safe for linking */
-	if (reg == PCR)
-		*extbyte = 0x8D;
+	if (t == TDIR) {
+		outrab(ap);
+		return;
+	}
+	if (t == TEXT) {
+		outraw(ap);
+		return;
+	}
+	if (t == TINDEX) {
+		/* Can have 5 or 8bit offset encoding FIXME */
+		outab(0x89 | r);
+		outraw(ap);
+		return;
+	}
+	if (t == (TMINDIR|TINDEX)) {
+		/* Can have 8bit offset encoding FIXME */
+		outab(0x99 | r);
+		outraw(ap);
+		return;
+	}
+	if (t == TPOST1) {
+		outab(0x80 | r);
+		return;
+	}
+	if (t == TPOST2) {
+		outab(0x81 | r);
+		return;
+	}
+	if (t == TPRE1) {
+		outab(0x82 | r);
+		return;
+	}
+	if (t == TPRE2) {
+		outab(0x83 | r);
+		return;
+	}
+	if (t == (TMINDIR|TPOST2)) {
+		outab(0x91 | r);
+		return;
+	}
+	if (t == (TMINDIR|TPRE2)) {
+		outab(0x93 | r);
+	}
+	if (t == TINDEXA) {
+		outab(0x86 | r);
+	}
+	if (t == TINDEXB) {
+		outab(0x85 | r);
+	}
+	if (t == TINDEXD) {
+		outab(0x8B | r);
+	}
+	if (t == (TMINDIR|TINDEXA)) {
+		outab(0x96 | r);
+	}
+	if (t == (TMINDIR|TINDEXB)) { 
+		outab(0x95 | r);
+	}
+	if (t == (TMINDIR|TINDEXD)) {
+		outab(0x9B | r);
+	}
+	if (t == (TMINDIR|TEXT)) {
+		outab(0x9F);
+		outraw(ap);
+		return;
+	}
+	fprintf(stderr, "Internal encode %x\n", t);
+}
+
+/* The 80-FF space is highly regular */
+void encode_high_op(unsigned opcode, ADDR *ap, unsigned size, unsigned has_imm)
+{
+	unsigned ta1 = ap->a_type & TMADDR;
+	if (opcode >> 8)
+		outab(opcode >> 8);
+	if (ta1 == TIMMED && has_imm)
+		outab(opcode);
+	else if (ta1 == TDIR)
+		outab(opcode + 0x10);
+	else if (is_postbyte(ap))
+		outab(opcode + 0x20);
+	else if (ta1 == TEXT)
+		outab(opcode + 0x30);
 	else
-		*extbyte = 0x89;
-	return 2;
+		qerr(INVALID_FORM);
+	write_data(ap, size);
 }
 
 /*
@@ -264,7 +439,7 @@ void asmline(void)
 	char id1[NCPS];
 	ADDR a1;
 	ADDR a2;
-	int user;
+	unsigned ta1;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
@@ -386,10 +561,10 @@ loop:
 		for (value = 0 ; value < a1.a_value; value++)
 			outab(0);
 		break;
-
+#if 0
 	case TBRA:
 		/* FIXME: sort out symbols here and on 6502 */
-		getaddr(&a1);
+		getaddr(&a1, NULL, 0);
 		disp = a1.a_value-dot[segment]-2;
 		if (disp<-128 || disp>127 || a1.a_segment != segment)
 			aerr(BRA_RANGE);
@@ -399,127 +574,88 @@ loop:
 
 	case TLBRA:
 		/* FIXME: support this with symbols */
-		getaddr(&a1);
+		getaddr(&a1, NULL, 0);
 		disp = a1.a_value-dot[segment]-2;
 		if (disp<-32768 || disp> 32767 || a1.a_segment != segment)
-			aerr(LBRA_RANGE);
+			aerr(BRA_RANGE);
 		outab(opcode);
 		outab(disp);
 		break;
-
-	case TIMPL:
+#endif
+	/* No following data. Instruction may be one or two bytes long */
+	case TIMP:
 		if (opcode >> 8)
 			outab(opcode >> 8);
 		outab(opcode);
 		break;
-
+	/* Byte sized operations in lower half of instruction set */
 	case TLO:
-		size = getaddr(&a1, &ext);
-
+		getaddr_r(&a1);
+		ta1 = a1.a_type & (TMADDR | TMINDIR);
 		if (opcode >> 8)
 			outab(opcode >> 8);
-		switch(a1.a_type & TMADDR) {
-			case 0:
-				aerr(NO_IMMEDIATE);
-				break;
-			case TEXT:
-				outab(opcode + 0x70);
-				outraw(&a1);
-				break;
-			case TDP:
-				outab(opcode);
-				outrab(&a1);
-				break;
-			case TIND:
-				outab(opcode + 0x60);
-				outrab(ext);
-				if (size == 1)
-					outrab(&a1);
-				else if (size == 2)
-					outraw(&a1);
-		}
+		if (ta1 == TEXT)
+			outab(opcode + 0x70);
+		else if (ta1 == TDIR)
+			outab(opcode);
+		else if (is_postbyte(&a1))
+			outab(opcode + 0x60);
+		else
+			aerr(INVALID_FORM);
+		write_data(&a1, 1);
 		break;				
+	/* LEA instruction. Only forms are an indexed address which may
+	   include the use of A or B. Offsets are signed */
 	case TLEA:
-		size = getaddr(&a1, &ext);
-		if ((a1.a1_type & TMADDR) != TEXT)
-			aerr(MUST_BE_INDEXED);
+		getaddr_r(&a1);
+		if (!is_indexed(&a1))
+			aerr(INVALID_FORM);
 		outab(opcode);
-		outab(ext);
-		if (size == 1)
-			outrabs(a1);
-		else if (size == 2)
-			outraws(a1);
+		write_data(&a1, 2);
 		break;
-	case THI:
-	case THIW:
-	case THINOIMM:
-	case THIWNOIMM:
-		size = getaddr(&a1, &ext);
-		mode = a1.a1_type & TMADDR;
-
-		if (opcode >> 8)
-			outab(opcode >> 8);
-
-		switch(mode) {
-			case 0:
-				outab(opcode);
-				switch(sp->s_type & TMMODE) {
-				case THIW:
-					outraw(&a1);
-					break;
-				case THI:
-					outrab(&a1);
-					break;
-				default:
-					aerr(NO_IMMEDIATE);
-				}
-				break;
-			case TEXT:
-				outab(opcode + 0x30);
-				outraw(&a1);
-				break;
-			case TDP:
-				outab(opcode + 0x10);
-				outrab(&a1);
-				break;
-			case TIND:
-				outab(opcode + 0x20);
-				outrab(ext);
-				if (size == 1)
-					outrabs(&a1);
-				else if (size == 2)
-					outraws(&a1);
-		}
+	case THI:	/* Byte sized operation with immediate */
+		encode_high_op(opcode, &a1, 1, 1);
 		break;
-
-	case TIMM8:
+	case THIW:	/* Word sized operation with immediate */
+		encode_high_op(opcode, &a1, 1, 1);
+		break;
+	case THINOIMM:	/* Byte sized with no immediate (eg stores) */
+		encode_high_op(opcode, &a1, 1, 0);
+		break;
+	case THIWNOIMM:	/* Word sized with no immediate (eg stores) */
+		encode_high_op(opcode, &a1, 2, 0);
+		break;
+	case TIMM8:	/* 8bit immediate - cwait, and/orcc */
 		getaddr(&a1);
-		istuser(&a1);
-		if (a1.a_value > 255)
-			aerr(CONSTANT_TOO_LARGE);
+		if ((a1.a_type & TMADDR) != TIMMED)
+			aerr(CONSTANT_ONLY);
 		if (opcode >> 8)
 			outab(opcode >> 8);
 		outab(opcode);
-		outrab(a1);
+		outrab(&a1);
 		break;
-
+#if 0
 	case TEXG:
-		r1 = get_register();
+		/* Exchange operation. Registers are packed into nybbles and
+		   differ by word or byte format */
+		/* TODO */
+/*		r1 = get_register();
 		comma();
 		r2 = get_register();
-		opcode |= ????
+		opcode |= ???? */
 		outab(opcode);
 		break;
-	
+		/* Bitmash of registers for push and pop */
 	case TPUSH:
+/* TODO
 		mask |= 1 << get_register_mask();
-		while((c = getnb()) == ',') {
+		while((c = getnb()) == ',')
 			mask |= 1 << get_register_mask();
 		unget(c);
-		outab(opcde);
-		outab(mask);
+		outab(opcode);
+		outab(mask); */
 		break;
-	
+#endif
 	default:
 		aerr(SYNTAX_ERROR);
 	}

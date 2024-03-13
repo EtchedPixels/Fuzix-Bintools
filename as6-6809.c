@@ -1,5 +1,5 @@
 /*
- * Z-80 assembler.
+ * 6809 assembler.
  * Basic symbol tables.
  * Contain all of the instructions
  * and register names.
@@ -59,6 +59,7 @@ SYM	sym[] = {
 	{	0,	".commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	".buffers",	TSEGMENT,	BUFFERS	},
 
+	{	0,	"abx",		TIMP,		0x3A	},
 	{	0,	"adca",		THI,		0x89	},
 	{	0,	"adcb",		THI,		0xC9	},
 	{	0,	"adda",		THI,		0x8B	},
@@ -66,14 +67,13 @@ SYM	sym[] = {
 	{	0,	"addd",		THIW,		0xC3	},
 	{	0,	"anda",		THI,		0x84	},
 	{	0,	"andb",		THI,		0xC4	},
-	{	0,	"adcc",		TIMM8,		0x1C	},
+	{	0,	"andcc",	TIMM8,		0x1C	},
 	{	0,	"asla",		TIMP,		0x48	},
 	{	0,	"aslb",		TIMP,		0x58	},
 	{	0,	"asl",		TLO,		0x08	},
 	{	0,	"asra",		TIMP,		0x47	},
 	{	0,	"asrb",		TIMP,		0x57	},
 	{	0,	"asr",		TLO,		0x07	},
-	/* TODO Bxx */
 	{	0,	"bita",		THI,		0x85	},
 	{	0,	"bitb",		THI,		0xC5	},
 	{	0,	"clra",		TIMP,		0x4F	},
@@ -116,7 +116,7 @@ SYM	sym[] = {
 	{	0,	"leay",		TLEA,		0x31	},
 	{	0,	"lsla",		TIMP,		0x48	},
 	{	0,	"lslb",		TIMP,		0x49	},
-	{	0	"lsl",		TLO,		0x08	},
+	{	0,	"lsl",		TLO,		0x08	},
 	{	0,	"lsra",		TIMP,		0x44	},
 	{	0,	"lsrb",		TIMP,		0x54	},
 	{	0,	"lsr",		TLO,		0x04	},
@@ -160,7 +160,7 @@ SYM	sym[] = {
 	{	0,	"tfr",		TEXG,/*check*/	0x1F	},
 	{	0,	"tsta",		TIMP,		0x4D	},
 	{	0,	"tstb",		TIMP,		0x5D	},
-	{	0	"tst",		TLO,		0x0D	},
+	{	0,	"tst",		TLO,		0x0D	}
 };
 
 /*
@@ -185,25 +185,32 @@ void syminit(void)
 }
 
 char *etext[] = {
-	"unexpected character",
-	"phase error",
-	"multiple definitions",
-	"syntax error",
-	"must be absolute",
-	"missing delimiter",
-	"invalid constant",
-	"JR out of range",
-	"condition required",
-	"invalid register for operation",
-	"address required",
-	"invalid id",
-	"must be C",
-	"divide by 0",
-	"constant out of range",
-	"data in BSS",
-	"segment overflow",
-	"Z180 instruction",
-	"segment conflict"
+	"unexpected character",		/* 10 */
+	"phase error",			/* 11 */
+	"multiple definitions",		/* 12 */
+	"syntax error",			/* 13 */
+	"must be absolute",		/* 14 */
+	"missing delimiter",		/* 15 */
+	"invalid constant",		/* 16 */
+	"bra out of range",		/* 17 */
+	"condition required",		/* 18 */
+	"too many bra expansions",	/* 19 */
+	"index register expected",	/* 20 */
+	"invalid form",			/* 21 */
+	"immediate only",		/* 22 */
+	"divide by 0",			/* 23 */
+	"constant out of range",	/* 24 */
+	"data in BSS",			/* 25 */
+	"segment overflow",		/* 26 */
+	"data in ZP",			/* 27 */
+	"instruction requires 6309",	/* 28 */
+	"segment conflict",		/* 29 */
+	"address required",		/* 30 */
+	"invalid indirect",		/* 31 */
+	"invalid ID",			/* 32 */
+	"S,U,X or Y required",		/* 33 */
+	"register required",		/* 34 */
+	"expected ']'"			/* 35 */
 };
 
 /*
@@ -216,15 +223,9 @@ char *etext[] = {
 void isokaors(ADDR *ap, int paren)
 {
 	int mode;
-	int reg;
 
 	mode = ap->a_type&TMMODE;
 	if (mode == TUSER)
 		return;
-	if (mode==TWR && paren!=0) {
-		reg = ap->a_type&TMREG;
-		if (reg==IX || reg==IY)
-			return;
-	}
 	aerr(ADDR_REQUIRED);
 }

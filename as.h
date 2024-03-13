@@ -518,10 +518,11 @@ typedef	uint16_t	VALUE;		/* For symbol values */
  * symbol flags hide in the register
  * field of the address.
  */
-#define	TMREG	0x007F			/* Register code */
+#define	TMREG	0x000F			/* Register code */
 #define	TMMDF	0x0001			/* Multidef */
 #define	TMASG	0x0002			/* Defined by "=" */
 #define	TMMODE	0xFF00			/* Mode */
+#define TMADDR 	0x00F0			/* Addressing mode info */
 #define	TMINDIR	0x8000			/* Indirect flag in mode */
 #define TPUBLIC	0x0080			/* Exported symbol */
 
@@ -541,7 +542,9 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define	TENDC	0x0C00			/* end conditional */
 #define TSEGMENT 0x0D00			/* segments by number */
 #define TEXPORT 0x0E00			/* symbol export */
+
 /* CPU specific codes */
+
 #define THI	0x1100			/* all modes opcodes 0x80+ */
 #define THIW	0x1200			/* ditto word mode */
 #define THINOIMM 0x1300			/* ditto byte no immediate */
@@ -555,10 +558,17 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TBRA	0x1B00			/* branch */
 #define TLBRA	0x1C00			/* long branch */
 
-#define TAIMM	0x0000			/* #x :immediate mode 8bit */
-#define TADIR	0x0010			/* dp:x */
-#define TAIND	0x0020			/* Indexed postbyte forms */
-#define TAEXT	0x0030			/* xx : extended addressing */
+#define TIMMED	0x0010
+#define TDIR	0x0020
+#define TEXT	0x0030
+#define TINDEX	0x0040			/* Postbyte forms all below */
+#define TPOST1	0x0050			/* except TEXT|TMINDIR */
+#define TPOST2	0x0060			/* Ordering is assumed in is_postbyte */
+#define TPRE1	0x0070
+#define TPRE2	0x0080
+#define TINDEXA	0x0090
+#define TINDEXB	0x00A0
+#define TINDEXD	0x00B0
 
 /*
  * Registers.
@@ -591,9 +601,10 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define INVALID_CONST	16
 #define BRA_RANGE	17
 #define CONDCODE_ONLY	18
-#define INVALID_REGISTER	19
-#define MUST_BE_INDEXED	20
-#define BAD_MODE	21
+#define TOOMANYJCC	19
+#define NEED_INDEX	20
+#define INVALID_FORM	21
+#define CONSTANT_ONLY	22
 #define DIVIDE_BY_ZERO	23
 #define CONSTANT_RANGE  24
 #define DATA_IN_BSS	 25
@@ -604,6 +615,9 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define ADDR_REQUIRED	30
 #define INVALID_INDIR	31
 #define INVALID_ID	32
+#define NEED_PREPOST	33
+#define NEED_REGISTER	34
+#define NEED_CLSQUARE	35
 
 #elif TARGET_6800
 
