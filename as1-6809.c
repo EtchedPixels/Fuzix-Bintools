@@ -298,8 +298,8 @@ unsigned is_indexed(ADDR *ap)
 {
 	unsigned ta = ap->a_type & (TMADDR | TMINDIR);
 	if (ta != TINDEX && ta != TINDEXA && ta != TINDEXB && ta != TINDEXD)
-		return 1;
-	return 0;
+		return 0;
+	return 1;
 }
 
 unsigned is_postbyte(ADDR *ap)
