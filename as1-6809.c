@@ -74,8 +74,20 @@ unsigned parse_register(unsigned c)
 		return TBR|A;
 	if (c == 'b')
 		return TBR|B;
-	if (c == 'd')
+	if (c == 'c') {
+		c = getnb();
+		if (c == 'c')
+			return TBR|CC;
+		qerr(NEED_REGISTER);
+		return 0;
+	}
+	if (c == 'd') {
+		c = getnb();
+		if (c == 'p')
+			return TBR|DP;
+		unget(c);
 		return TWR|D;
+	}
 	if (c == 's')
 		return TWR|S;
 	if (c == 'u')
@@ -98,6 +110,93 @@ unsigned parse_register(unsigned c)
 		unget(c);
 	return TWR|PCR;
 }
+
+unsigned register_to_mask(unsigned r)
+{
+	switch(r) {
+	case TBR|A:
+		return 0x02;
+	case TBR|B:
+		return 0x04;
+	case TBR|CC:
+		return 0x01;
+	case TWR|D:
+		return 0x06;
+	case TBR|DP:
+		return 0x08;
+	case TWR|S:
+	case TWR|U:
+		return 0x40;
+	case TWR|X:
+		return 0x10;
+	case TWR|Y:
+		return 0x20;
+	case TWR|PCR:
+		return 0x80;
+	default:
+		qerr(INVALID_FORM);
+		return 0xFF;
+	}
+}
+
+unsigned register_to_nybble(unsigned r)
+{
+	switch(r) {
+	case TBR|A:
+		return 0x8;
+	case TBR|B:
+		return 0x9;
+	case TBR|CC:
+		return 0xA;
+	case TWR|D:
+		return 0x0;
+	case TBR|DP:
+		return 0xB;
+	case TWR|S:
+		return 0x4;
+	case TWR|U:
+		return 0x3;
+	case TWR|X:
+		return 0x1;
+	case TWR|Y:
+		return 0x2;
+	case TWR|PCR:
+		return 0x5;
+	default:
+		qerr(INVALID_FORM);
+		return 0xFF;
+	}
+}
+
+unsigned register_mask(unsigned exclude)
+{
+	unsigned mask = 0;
+	unsigned n;
+	unsigned c;
+	/* Parse a list of registers split by comma */
+	do {
+		c = getnb();
+		n = parse_register(c);
+		if (n == exclude)
+			qerr(INVALID_FORM);
+		mask |= register_to_mask(n);
+		c = getnb();
+	} while(c == ',');
+	unget(c);
+}
+
+unsigned exchange_pair(void)
+{
+	unsigned s, d;
+	s = parse_register(getnb());
+	comma();
+	d = parse_register(getnb());
+	/* Can't swap mixed sizes */
+	if ((s & TMMODE) != (d & TMMODE))
+		qerr(INVALID_FORM);
+	return (register_to_nybble(s) << 4) | register_to_nybble(d);
+}
+	
 
 void index_required(ADDR *ap)
 {
@@ -660,28 +759,19 @@ loop:
 		outab(opcode);
 		outrab(&a1);
 		break;
-#if 0
 	case TEXG:
-		/* Exchange operation. Registers are packed into nybbles and
-		   differ by word or byte format */
-		/* TODO */
-/*		r1 = get_register();
-		comma();
-		r2 = get_register();
-		opcode |= ???? */
+		/* tfr, xchg */
 		outab(opcode);
+		outab(exchange_pair());
 		break;
 		/* Bitmash of registers for push and pop */
 	case TPUSH:
-/* TODO
-		mask |= 1 << get_register_mask();
-		while((c = getnb()) == ',')
-			mask |= 1 << get_register_mask();
-		unget(c);
 		outab(opcode);
-		outab(mask); */
+		if (opcode == 0x34 || opcode == 0x35)
+			outab(register_mask(TWR|S));
+		else
+			outab(register_mask(TWR|U));
 		break;
-#endif
 	default:
 		aerr(SYNTAX_ERROR);
 	}
