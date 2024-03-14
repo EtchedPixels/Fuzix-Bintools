@@ -373,11 +373,14 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 	} else
 		unget(c);
 
-	if (postinc || predec)
+	if (postinc || predec) {
 		prepost_required(ap);
-	else
+		/* byte+ -byte indirect is not legal */
+		if (indirect && (postinc == 1 || predec == 1))
+			qerr(INVALID_FORM);
+		/* TODO: Check ++/-- on byte size */
+	} else
 		index_required(ap);
-	/* TODO: byte++ --byte indirect is not legal */
 	/* Now put together the address descriptor */
 	/* Set up the TMADDR bits */
 	if (indirect)
