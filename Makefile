@@ -9,13 +9,13 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
      reloc
 
-test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
+test: as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
+      as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       asnova ldnova nmnova osizenova dumprelocsnova \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
       assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
 
-todo: as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
-      as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
+todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
       aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
 
 CCROOT ?=/opt/fcc/
