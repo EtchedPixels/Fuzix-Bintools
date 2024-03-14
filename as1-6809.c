@@ -378,7 +378,6 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 		/* byte+ -byte indirect is not legal */
 		if (indirect && (postinc == 1 || predec == 1))
 			qerr(INVALID_FORM);
-		/* TODO: Check ++/-- on byte size */
 	} else
 		index_required(ap);
 	/* Now put together the address descriptor */
@@ -443,12 +442,54 @@ unsigned map_register(unsigned r)
 	return 0xFF;	/* So bugs show */
 }
 
+unsigned can_shorten(ADDR *ap)
+{
+	if (ap->a_segment == ABSOLUTE)
+		return 1;
+	return 0;
+}
+
+unsigned range_5bit(ADDR *ap)
+{
+	if (ap->a_value >= -32 && ap->a_value <= 31)
+		return 1;
+	return 0;
+}
+
+unsigned range_8bit(ADDR *ap)
+{
+	if (ap->a_value >= -128 && ap->a_value <= 127)
+		return 1;
+	return 0;
+}
+
+/* 6809 people expect the assembler to deal with both relative and
+   symbolic representations for pc relative. So it's valid to do
+   write 12,pcr  meanign pc + 12,  offset .equ 12 offset,pcr meaning
+   pc + 12 but also if fred is a symbol in the code etc that
+   fred,pcr means a reference to fred not fred + pc */
+void write_rel16(ADDR *ap)
+{
+	/* Absolute value - outraw will write it as is */
+	if (ap->a_segment == ABSOLUTE) {
+		outraw(ap);
+		return;
+	}
+	/* In a segment or unknown so assume it's a real address and
+	   write a 16bit relative address. This will probably need fixes
+	   to as4 and the linker as we've never had any pc relative word
+	   stuff before */
+	ap->a_value -= dot[segment];
+	ap->a_value -= 2;
+	outrawrel(ap);
+}
+
 /* Write out the post byte and data */
 void write_data(ADDR *ap, unsigned size)
 {
 	unsigned t = ap->a_type & (TMADDR | TMINDIR);
 	unsigned r = map_register(ap->a_type & TMREG);
-	/* TODO: PC relative symbols for ,PCR */
+
 	if (t == TIMMED) {
 		if (size == 1)
 			outrab(ap);
@@ -464,35 +505,90 @@ void write_data(ADDR *ap, unsigned size)
 		outraw(ap);
 		return;
 	}
+	/* PC relative indexing is a bit different to the others */
+	if (t == TINDEX && (ap->a_type & TMREG) == PCR) {
+		if (can_shorten(ap) && range_8bit(ap)) {
+			outab(0x8C);
+			outrab(ap);
+			return;
+		}
+		outab(0x8D);
+		write_rel16(ap);
+		return;
+	}
+	if (t == (TINDEX|TMINDIR) && (ap->a_type & TMREG) == PCR) {
+		if (can_shorten(ap) && range_8bit(ap)) {
+			outab(0x9C);
+			outrab(ap);
+			return;
+		}
+		outab(0x9D);
+		write_rel16(ap);
+		return;
+	}
 	if (t == TINDEX) {
-		/* Can have 5 or 8bit offset encoding FIXME */
+		if (can_shorten(ap)) {
+			if (ap->a_value == 0) {
+				outab(0x84);
+				return;
+			}
+			/* Can have 5 or 8bit offset encoding */
+			if (range_5bit(ap)) {
+				outab(r + (ap->a_value & 0x1F));
+				return;
+			}
+			if (range_8bit(ap)) {
+				outab(0x88);
+				outrab(ap);
+				return;
+			}
+		}
 		outab(0x89 | r);
 		outraw(ap);
 		return;
 	}
 	if (t == (TMINDIR|TINDEX)) {
-		/* Can have 8bit offset encoding FIXME */
+		if (can_shorten(ap)) {
+			if (ap->a_value == 0) {
+				outab(0x94);
+				return;
+			}
+			if (range_8bit(ap)) {
+				outab(0x98);
+				outrab(ap);
+				return;
+			}
+		}
 		outab(0x99 | r);
 		outraw(ap);
 		return;
 	}
-	/* TODO: pre/post must match size */
+	/* Pre/post must match size */
 	if (t == TPOST1) {
+		if (size == 2)
+			qerr(INVALID_FORM);
 		outab(0x80 | r);
 		return;
 	}
 	if (t == TPOST2) {
+		if (size == 1)
+			qerr(INVALID_FORM);
 		outab(0x81 | r);
 		return;
 	}
 	if (t == TPRE1) {
+		if (size == 2)
+			qerr(INVALID_FORM);
 		outab(0x82 | r);
 		return;
 	}
 	if (t == TPRE2) {
+		if (size == 1)
+			qerr(INVALID_FORM);
 		outab(0x83 | r);
 		return;
 	}
+	/* Indirect pre/post always word and was checked in getaddr_r */
 	if (t == (TMINDIR|TPOST2)) {
 		outab(0x91 | r);
 		return;
@@ -725,13 +821,13 @@ loop:
 			if (pass == 2)
 				setnextrel(c);
 		}
-		a1.a_value -= dot[segment];
-		a1.a_value -= 2;
 		if (c) {	/* LBxx is 0x10, Bxx, ... */
 			outab(0x10);
 			outab(opcode);
-			outrawrel(&a1);
+			write_rel16(&a1);
 		} else {
+			a1.a_value -= dot[segment];
+			a1.a_value -= 2;
 			outab(opcode);
 			outrabrel(&a1);
 		}
@@ -743,9 +839,7 @@ loop:
 		if (opcode >> 8)
 			outab(opcode >> 8);
 		outab(opcode);
-		a1.a_value -= dot[segment];
-		a1.a_value -= 2;
-		outrawrel(&a1);
+		write_rel16(&a1);
 		break;
 	/* No following data. Instruction may be one or two bytes long */
 	case TIMP:
