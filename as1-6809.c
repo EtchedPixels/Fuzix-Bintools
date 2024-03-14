@@ -39,6 +39,17 @@ static unsigned int getnextrel(void)
 	return n;
 }
 
+/* Handle the corner case of labels in direct page being used as relative
+   branches from the overlapping 'absolute' space */
+static int segment_incompatible(ADDR *ap)
+{
+	if (ap->a_segment == segment)
+		return 0;
+	if (ap->a_segment == ZP && segment == 0 && ap->a_value < 256)
+		return 0;
+	return 1;
+}
+
 /*
  * Deal with the syntactic mess 6809 assembler has
  *
@@ -583,7 +594,17 @@ loop:
 			sp->s_type |= TUSER;
 			sp->s_value = dot[segment];
 			sp->s_segment = segment;
+		} else if (pass != 3) {
+			/* Don't check for duplicates, we did it already
+			   and we will confuse ourselves with the pass
+			   before. Instead blindly update the values */
+			sp->s_type &= ~TMMODE;
+			sp->s_type |= TUSER;
+			sp->s_value = dot[segment];
+			sp->s_segment = segment;
 		} else {
+			/* Phase 2 defined the values so a misalignment here
+			   is fatal */
 			if ((sp->s_type&TMMDF) != 0)
 				err('m', MULTIPLE_DEFS);
 			if (sp->s_value != dot[segment])
@@ -688,13 +709,29 @@ loop:
 			outab(0);
 		break;
 	case TBRA:
-		/* TODO: sort of lbxx extension */
 		getaddr(&a1);
 		disp = a1.a_value-dot[segment]-2;
-		if (disp<-128 || disp>127 || a1.a_segment != segment)
-			aerr(BRA_RANGE);
-		outab(opcode);
-		outrabrel(&a1);
+		if (pass == 3)
+			c = getnextrel();
+		else {
+			c = 0;
+			/* Will it fit, do we know ? */
+			if (pass == 0 || segment_incompatible(&a1) || disp<-128 || disp>127)
+				c = 1;
+			/* On pass 2 we lock down our choices in the table */
+			if (pass == 2)
+				setnextrel(c);
+		}
+		a1.a_value -= dot[segment];
+		a1.a_value -= 2;
+		if (c) {	/* LBxx is 0x10, Bxx, ... */
+			outab(0x10);
+			outab(opcode);
+			outrawrel(&a1);
+		} else {
+			outab(opcode);
+			outrabrel(&a1);
+		}
 		break;
 	case TLBRA:
 		getaddr(&a1);
