@@ -264,6 +264,7 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 
 	ap->a_type = 0;
 	ap->a_flags = 0;
+	ap->a_value = 0;
 	ap->a_sym = NULL;
 
 	c = getnb();
@@ -451,14 +452,14 @@ unsigned can_shorten(ADDR *ap)
 
 unsigned range_5bit(ADDR *ap)
 {
-	if (ap->a_value >= -32 && ap->a_value <= 31)
+	if ((signed int)ap->a_value >= -32 && ap->a_value <= 31)
 		return 1;
 	return 0;
 }
 
 unsigned range_8bit(ADDR *ap)
 {
-	if (ap->a_value >= -128 && ap->a_value <= 127)
+	if ((signed int)ap->a_value >= -128 && ap->a_value <= 127)
 		return 1;
 	return 0;
 }
@@ -529,7 +530,7 @@ void write_data(ADDR *ap, unsigned size)
 	if (t == TINDEX) {
 		if (can_shorten(ap)) {
 			if (ap->a_value == 0) {
-				outab(0x84);
+				outab(0x84 | r);
 				return;
 			}
 			/* Can have 5 or 8bit offset encoding */
@@ -538,7 +539,7 @@ void write_data(ADDR *ap, unsigned size)
 				return;
 			}
 			if (range_8bit(ap)) {
-				outab(0x88);
+				outab(0x88 | r);
 				outrab(ap);
 				return;
 			}
@@ -550,11 +551,11 @@ void write_data(ADDR *ap, unsigned size)
 	if (t == (TMINDIR|TINDEX)) {
 		if (can_shorten(ap)) {
 			if (ap->a_value == 0) {
-				outab(0x94);
+				outab(0x94 | r);
 				return;
 			}
 			if (range_8bit(ap)) {
-				outab(0x98);
+				outab(0x98 | r);
 				outrab(ap);
 				return;
 			}
@@ -822,8 +823,14 @@ loop:
 				setnextrel(c);
 		}
 		if (c) {	/* LBxx is 0x10, Bxx, ... */
-			outab(0x10);
-			outab(opcode);
+			if (opcode == 0x8D)	/* BSR -> LBSR */
+				outab(0x17);
+			else if (opcode == 0x20) /* BRA -> LBRA */
+				outab(0x16);
+			else {	/* Conditional ones expand with 0x10 */
+				outab(0x10);
+				outab(opcode);
+			}
 			write_rel16(&a1);
 		} else {
 			a1.a_value -= dot[segment];
