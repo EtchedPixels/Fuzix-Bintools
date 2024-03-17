@@ -32,6 +32,7 @@ struct objhdr
 #define OA_WARREX	11
 #define OA_BYTE		12	/* Bytecode */
 #define OA_6809		13
+#define OA_PE16		14	/* Interdata/Perkin Elmer 16bit */
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */
