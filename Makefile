@@ -1,6 +1,7 @@
 all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      as6502 ld6502 nm6502 osize6502 dumprelocs6502 \
      as6800 ld6800 nm6800 osize6800 dumprelocs6800 \
+     as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
      as8008 ld8008 nm8008 osize8008 dumprelocs8008 \
      as8080 ld8080 nm8080 osize8080 dumprelocs8080 \
      as9900 ld9900 nm9900 osize9900 dumprelocs9900 \
@@ -9,10 +10,10 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
      reloc
 
-test: as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
-      as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
-      asnova ldnova nmnova osizenova dumprelocsnova \
+test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
+      asnova ldnova nmnova osizenova dumprelocsnova \
+      aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 \
       assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
 
 todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
@@ -193,6 +194,21 @@ osizenova: $(HDR) osize.c
 dumprelocsnova: $(HDR) dumprelocs.o
 	cc -o dumprelocsnova dumprelocs.o
 
+aspe16: $(HDR) $(CORE) as1-pe16.c as6-pe16.c
+	cc  -DTARGET_PE16 -o aspe16 $(CORE) as1-pe16.c as6-pe16.c
+
+ldpe16: $(HDR) ld.c
+	cc -o ldpe16 ld.c
+
+nmpe16: $(HDR) nm.c
+	cc -o nmpe16 nm.c
+
+osizepe16: $(HDR) osize.c
+	cc -o osizepe16 osize.c
+
+dumprelocspe16: $(HDR) dumprelocs.o
+	cc -o dumprelocspe16 dumprelocs.o
+
 asz8: $(HDR) $(CORE) as1-z8.c as6-z8.c
 	cc  -DTARGET_Z8 -o asz8 $(CORE) as1-z8.c as6-z8.c
 
@@ -252,6 +268,7 @@ clean:
 	rm -f asee200 ldee200 nmee200 osizeee200 dumprelocsee200
 	rm -f asnova ldnova nmnova osizenova dumprelocsnova
 	rm -f aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
+	rm -f aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16
 	rm -f assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8
 	rm -f asz8 ldz8 nmz8 osizez8 dumprelocsz8
 	rm -f asz80 ldz80 nmz80 osizez80 dumprelocsz80
@@ -264,6 +281,7 @@ install: all
 	cp as1802 ld1802 nm1802 osize1802 dumprelocs1802 $(CCROOT)/bin
 	cp as6502 ld6502 nm6502 osize6502 dumprelocs6502 $(CCROOT)/bin
 	cp as6800 ld6800 nm6800 osize6800 dumprelocs6800 $(CCROOT)/bin
+	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
 	cp as8008 ld8008 nm8008 osize8008 dumprelocs8008 $(CCROOT)/bin
 	cp as8080 ld8080 nm8080 osize8080 dumprelocs8080 $(CCROOT)/bin
 	cp as9900 ld9900 nm9900 osize9900 dumprelocs9900 $(CCROOT)/bin
@@ -275,8 +293,9 @@ install: all
 installtest: test
 	mkdir -p /opt/fcc/bin
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
-	cp asnova ldnova nmnova osizenova dumprelocsnova $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
+	cp asnova ldnova nmnova osizenova dumprelocsnova $(CCROOT)/bin
+	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
 	cp assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 $(CCROOT)/bin
 
 #	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
