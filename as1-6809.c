@@ -863,6 +863,22 @@ loop:
 			aerr(INVALID_FORM);
 		write_data(&a1, 1);
 		break;				
+	case TJSR:
+		/* JSR is stuffed into odd spots */
+		getaddr_r(&a1);
+		ta1 = a1.a_type & (TMADDR | TMINDIR);
+		if (opcode >> 8)
+			outab(opcode >> 8);
+		if (ta1 == TEXT)
+			outab(opcode + 0x20);
+		else if (ta1 == TDIR)
+			outab(opcode);
+		else if (is_postbyte(&a1))
+			outab(opcode + 0x10);
+		else
+			aerr(INVALID_FORM);
+		write_data(&a1, 1);
+		break;
 	/* LEA instruction. Only forms are an indexed address which may
 	   include the use of A or B. Offsets are signed */
 	case TLEA:

@@ -119,7 +119,7 @@ SYM	sym[] = {
 	{	0,	"incb",		TIMP,		0x5C	},
 	{	0,	"inc",		TLO,		0x0C	},
 	{	0,	"jmp",		TLO,		0x0E	},
-	{	0,	"jsr",		TLO,		0x9D	},
+	{	0,	"jsr",		TJSR,		0x9D	},
 	{	0,	"lbra",		TLBRA,		0x16	},
 	{	0,	"lbsr",		TLBRA,		0x17	},
 	{	0,	"lbrn",		TLBRA,		0x1021	},
