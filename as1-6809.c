@@ -16,7 +16,7 @@ static unsigned int nextrel;
 
 int passbegin(int pass)
 {
-	cputype = 6800;
+	cputype = 6809;
 	segment = 1;		/* Default to code */
 	if (pass == 3)
 		nextrel = 0;
@@ -194,6 +194,7 @@ unsigned register_mask(unsigned exclude)
 		c = getnb();
 	} while(c == ',');
 	unget(c);
+	return mask;
 }
 
 unsigned exchange_pair(void)
@@ -266,6 +267,7 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 	ap->a_flags = 0;
 	ap->a_value = 0;
 	ap->a_sym = NULL;
+	ap->a_segment = ABSOLUTE;
 
 	c = getnb();
 
@@ -452,14 +454,14 @@ unsigned can_shorten(ADDR *ap)
 
 unsigned range_5bit(ADDR *ap)
 {
-	if ((signed int)ap->a_value >= -32 && ap->a_value <= 31)
+	if ((int16_t)ap->a_value >= -32 && (int16_t)ap->a_value <= 31)
 		return 1;
 	return 0;
 }
 
 unsigned range_8bit(ADDR *ap)
 {
-	if ((signed int)ap->a_value >= -128 && ap->a_value <= 127)
+	if ((int16_t)ap->a_value >= -128 && (int16_t)ap->a_value <= 127)
 		return 1;
 	return 0;
 }
@@ -675,7 +677,6 @@ void asmline(void)
 	char id[NCPS];
 	char id1[NCPS];
 	ADDR a1;
-	ADDR a2;
 	unsigned ta1;
 
 loop:
@@ -868,7 +869,7 @@ loop:
 			outab(opcode + 0x60);
 		else
 			aerr(INVALID_FORM);
-		write_data(&a1, 1);
+		write_data(&a1, 2);
 		break;				
 	case TJSR:
 		/* JSR is stuffed into odd spots */
@@ -884,7 +885,7 @@ loop:
 			outab(opcode + 0x10);
 		else
 			aerr(INVALID_FORM);
-		write_data(&a1, 1);
+		write_data(&a1, 2);
 		break;
 	/* LEA instruction. Only forms are an indexed address which may
 	   include the use of A or B. Offsets are signed */
