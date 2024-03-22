@@ -454,7 +454,7 @@ unsigned can_shorten(ADDR *ap)
 
 unsigned range_5bit(ADDR *ap)
 {
-	if ((int16_t)ap->a_value >= -32 && (int16_t)ap->a_value <= 31)
+	if ((int16_t)ap->a_value >= -16 && (int16_t)ap->a_value <= 15)
 		return 1;
 	return 0;
 }
