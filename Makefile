@@ -12,6 +12,7 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
 
 test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
+      ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 \
       asnova ldnova nmnova osizenova dumprelocsnova \
       aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 \
       assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
@@ -179,6 +180,21 @@ osizeee200: $(HDR) osize.c
 dumprelocsee200: $(HDR) dumprelocs.o
 	cc -o dumprelocsee200 dumprelocs.o
 
+ashc11: $(HDR) $(CORE) as1-hc11.c as6-hc11.c
+	cc  -DTARGET_HC11 -o ashc11 $(CORE) as1-hc11.c as6-hc11.c
+
+ldhc11: $(HDR) ld.c
+	cc -o ldhc11 ld.c
+
+nmhc11: $(HDR) nm.c
+	cc -o nmhc11 nm.c
+
+osizehc11: $(HDR) osize.c
+	cc -o osizehc11 osize.c
+
+dumprelocshc11: $(HDR) dumprelocs.o
+	cc -o dumprelocshc11 dumprelocs.o
+
 asnova: $(HDR) $(CORE) as1-nova.c as6-nova.c
 	cc  -DTARGET_DGNOVA -o asnova $(CORE) as1-nova.c as6-nova.c
 
@@ -266,6 +282,7 @@ clean:
 	rm -f as8080 ld8080 nm8080 osize8080 dumprelocs8080
 	rm -f as9900 ld9900 nm9900 osize9900 dumprelocs9900
 	rm -f asee200 ldee200 nmee200 osizeee200 dumprelocsee200
+	rm -f ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11
 	rm -f asnova ldnova nmnova osizenova dumprelocsnova
 	rm -f aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
 	rm -f aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16
@@ -294,6 +311,7 @@ installtest: test
 	mkdir -p /opt/fcc/bin
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
+	cp ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 $(CCROOT)/bin
 	cp asnova ldnova nmnova osizenova dumprelocsnova $(CCROOT)/bin
 	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
 	cp assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 $(CCROOT)/bin
