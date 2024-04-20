@@ -33,6 +33,7 @@ struct objhdr
 #define OA_BYTE		12	/* Bytecode */
 #define OA_6809		13
 #define OA_PE16		14	/* Interdata/Perkin Elmer 16bit */
+#define OA_8086		15
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */
@@ -72,6 +73,9 @@ struct objhdr
 #define OA_WARREX_CPU6	1
 
 #define OA_6809_6309	1
+
+#define OA_8086_186	1
+#define OA_8086_286	2
 
     uint16_t o_unused;		/* So it packs right */
     uint32_t o_segbase[OSEG];

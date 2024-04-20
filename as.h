@@ -1595,9 +1595,8 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TPUBLIC	0x0080			/* Exported symbol */
 #define TMADDR	0x00F0			/* Addressing mode bits */
 
-#define TDIRECT	0x0010			/* Direct page */
-#define TINDEX	0x0020			/* Indexed */
-#define TIMMED	0x0030			/* Immediate */
+#define TIMMED	0x0010			/* Direct page */
+#define TMODRM	0x0020			/* MODRM forms */
 
 #define	TNEW	0x0000			/* Virgin */
 #define	TUSER	0x0100			/* User name */

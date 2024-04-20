@@ -86,6 +86,170 @@ void getaddr(ADDR *ap)
 	expr1(ap, LOPRI, 0);
 }
 
+/*
+ *	Complex encodings.
+ *
+ *	reg8
+ *	reg16
+ *	[BX]
+ *	[DI]
+ *	[SI]
+ *	[addr.16]
+ *	[BP+SI]
+ *	[BP+DI]
+ *	[BX+SI]
+ *	[BX+DI]
+ *	[BP+SI+i8/16]
+ *	[BP+DI+i8/16]
+ *	[BX+SI+i8/16]
+ *	[BX+DI+i8/16]
+ *	[BP+i8/16]
+ *	[BX+i8/16]
+ *	[DI+i8/16]
+ *	[SI+i8/16]
+ *
+ */
+
+/* Registers within address specifications. Only BX BP SI DI */
+static unsigned get_reg(void)
+{
+	int c = getnb();
+	char id[NCPS];
+	getid(id, c);
+	if (strcmp(id, "bx") == 0)
+		return BX;
+	if (strcmp(id, "bp") == 0)
+		return BP;
+	if (strcmp(id, "si") == 0)
+		return SI;
+	if (strcmp(id, "di") == 0)
+		return DI;
+	return 0;
+}
+
+/* Turn a pair of reg names and a value into something */
+static unsigned make_modrm(ADDR *ap, unsigned r1, unsigned r2)
+{
+	unsigned modrm;
+	int off;
+
+	if (r1 == BX) {
+		if (r2 == SI)
+			modrm = 0;
+		else if (r2 == DI)
+			modrm = 1;
+		else if (r2 == 0)
+			modrm = 7;
+		else
+			aerr(BADMODE);
+	} else if (r1 == BP) {
+		if (r2 == SI)
+			modrm = 2;
+		if (r2 == DI)
+			modrm = 3;
+		else if (r2 == 0)
+			modrm = 6;
+		else
+			aerr(BADMODE);
+	} else if (r1 == SI)
+		modrm = 4;
+	else if (r1 == SI)
+		modrm = 5;
+	else
+		aerr(BADMODE);
+	/* Now figure the mod bits */
+	/* TODO: deal with unresolved symbols as 16bit with a relocation */
+	off = ap->a_value;
+	if (off < -128 || off > 127)
+		modrm |= 0x80;
+	else if (off != 0 || modrm == 6)
+		modrm |= 0x40;
+	return modrm;
+}
+
+/* TODO: segment prefixing, byte/word hints */
+void getaddr_mem(ADDR *ap, unsigned *modrm)
+{
+	int c;
+	unsigned mem = 0;
+	unsigned mod = 0;
+	unsigned r1 = 0, r2 = 0;
+
+	ap->a_type = 0;
+	ap->a_flags = 0;
+	ap->a_sym = NULL;
+
+	c = getnb();
+	if (c == '[') {
+		mem = 1;
+		c = getnb();
+	}
+	if (c == '<')
+		ap->a_flags |= A_LOW;
+	else if (c == '>')
+		ap->a_flags |= A_HIGH;
+	else
+		unget(c);
+
+	if (mem == 0)  {
+		/* Can be a register - how to handle nicely ? */
+		expr1(ap, LOPRI, 0);
+		if ((ap->a_type & TMMODE) == TBR) {
+			*modrm = 0xC0 | (ap->a_type & TMREG);
+			/* 8bit implied */
+		} else if ((ap->a_type & TMMODE) == TWR) {
+			*modrm = 0xC0 | (ap->a_type & TMREG);
+			/* 16bit implied */
+		}
+		else if ((ap->a_type & TMMODE) == TSR) {
+			/* Special */
+		} else
+			ap->a_flags |= TIMMED;
+		return;
+	}
+
+	/* Is it a register  ? */
+	r1 = get_reg();
+	if (r1 == -1) {
+		/* Simple expression for the address */
+		expr1(ap, LOPRI, 0);
+		mod = 0x06;
+	} else {
+		c = getnb();
+		if (c == '+') {
+			r2 = get_reg();
+			/* [ Reg + expr ] */
+			if (r2 == -1) {
+				/* Expression then ? */
+				expr1(ap, LOPRI, 0);
+				mod = make_modrm(ap, r1, 0);
+			} else {
+				/* [ Reg + Reg .. */
+				c = getnb();
+				/* [ Reg + Reg + num] */
+				if (c == '+') {
+					expr1(ap, LOPRI, 0);
+					mod = make_modrm(ap, r1, r2);
+				} else  {
+					unget(c);
+					ap->a_value = 0;
+					mod = make_modrm(ap, r1, r2);
+				}
+			}
+		} else {
+			/* Single register */
+			unget(c);
+			ap->a_value = 0;
+			mod = make_modrm(ap, r1, 0);
+		}
+	}
+	c = getnb();
+	if (c != ']')
+		aerr(SQUARE_EXPECTED);
+	ap->a_type |= TMODRM;
+	*modrm = mod;
+}
+
 static void need_186(void)
 {
 	if (cputype < 186)
@@ -114,6 +278,7 @@ void asmline(void)
 	char id1[NCPS];
 	ADDR a1;
 	unsigned ta1;
+	unsigned mod;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
@@ -258,7 +423,7 @@ loop:
 			outab(opcode >> 8);
 		outab(opcode);
 		break;
-	
+
 	case TJCX:
 		getaddr(&a1);
 		disp = a1.a_value - dot[segment] - 2;
@@ -307,6 +472,52 @@ loop:
 		if (a1.a_value > 0xFF)
 			aerr(RANGE);
 		outab(a1.a_value);
+		break;
+	case TPUSH:
+		getaddr_mem(&a1, &mod);
+		ta1 = a1.a_type & TMMODE;
+		if ((a1.a_type & TMADDR) == TMODRM) {
+			/* Only an address is permitted TODO: 186 const */
+			if (mod != 0x06)
+				aerr(BADMODE);
+//			outsegment();
+			outab(0xFF);
+			outab(mod | 0x30);
+			/* FIXME raw or relraw */
+			outraw(&a1);
+			break;
+		} else {
+			/* Must be a reg16 or seg */
+			if (ta1 == TWR)
+				outab(0x50 | (a1.a_type & TMREG));
+			else if (ta1 == TSR)
+				outab(0x06 | ((a1.a_type & TMREG) << 3));
+			else
+				aerr(BADMODE);
+		}
+		break;
+	case TPOP:
+		getaddr_mem(&a1, &mod);
+		ta1 = a1.a_type & TMMODE;
+		if ((a1.a_type & TMADDR) == TMODRM) {
+			/* Only an address is permitted */
+			if (mod != 0x06)
+				aerr(BADMODE);
+//			outsegment();
+			outab(0x8F);
+			outab(mod | 0x30);
+			/* FIXME raw or relraw */
+			outraw(&a1);
+			break;
+		} else {
+			/* Must be a reg16 or seg */
+			if (ta1 == TWR)
+				outab(0x58 | (a1.a_type & TMREG));
+			else if (ta1 == TSR)
+				outab(0x07 | ((a1.a_type & TMREG) << 3));
+			else
+				aerr(BADMODE);
+		}
 		break;
 	default:
 		aerr(SYNTAX_ERROR);
