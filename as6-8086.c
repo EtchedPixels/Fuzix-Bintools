@@ -98,7 +98,7 @@ SYM	sym[] = {
 	 {	0,	"cwd",		TIMPL,		0x99	},
 	 {	0,	"daa",		TIMPL,		0x27	},
 	 {	0,	"das",		TIMPL,		0x2F	},
-	 {	0,	"dec",		TRM,		0x40	},
+	 {	0,	"dec",		TRM,		0xFE08	},
 	 /* Extra forms with 186 on div else TR */
 	 {	0,	"div",		TDIV,		0xF630	},
 	 {	0,	"hlt",		TIMPL,		0xF4	},
@@ -106,7 +106,7 @@ SYM	sym[] = {
 	 /* Extra 186 forms */
 	 {	0,	"imul",		TMUL,		0xF628	},
 	 {	0,	"in",		TIO,		0xE4	},
-	 {	0,	"inc",		TRM,		0x40	},
+	 {	0,	"inc",		TRM,		0xFE00	},
 	 {	0,	"int",		TIMM8,		0xCC	},
 	 {	0,	"into",		TIMPL,		0xCE	},
 	 {	0,	"iret",		TIMPL,		0xCF	},

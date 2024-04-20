@@ -273,6 +273,18 @@ static void outmod(unsigned modrm, ADDR *ap)
 	}
 }
 
+static unsigned opsize(unsigned modrm, ADDR *ap)
+{
+	if ((ap->a_type & TMMODE) == TWR)
+		return 1;	/* word */
+	if ((ap->a_type & TMMODE) == TBR)
+		return 0;	/* byte */
+	if ((ap->a_type & TMMODE) == TSR)
+		return 1;	/* segment reg */
+	/* TODO byte/word overrides */
+	return 0;
+}
+
 static void need_186(void)
 {
 	if (cputype < 186)
@@ -631,6 +643,36 @@ loop:
 			break;
 		} else
 			aerr(BADMODE);
+		break;
+	case TRM:
+		/* inc, dec, neg, not */
+		getaddr_mem(&a1, &mod1);
+		ta1 = a1.a_type & TMMODE;
+		/* INC and DEC short forms */
+		if ((opcode >> 8) == 0xFE && ta1 == TWR) {
+			opcode = 0x40 | (opcode & 8);
+			outab(opcode | (a1.a_type & TMREG));
+			break;
+		}
+		if (ta1 == TWR) {
+			outab((opcode >> 8) | 1);
+			outab(0xC0 | (a1.a_type & TMREG));
+			break;
+		}
+		if (ta1 == TBR) {
+			outab(opcode >> 8);
+			outab(0xC0 | (a1.a_type & TMREG));
+			break;
+		}
+		/* Long forms of all */
+		if ((a1.a_type & TMADDR) == TMODRM) {
+//			outsegment();
+			outab((opcode >> 8) | opsize(mod1, &a1));
+			mod1 |= opcode & 0xFF;
+			outmod(mod1, &a1);
+			break;
+		}
+		aerr(BADMODE);
 		break;
 	default:
 		aerr(SYNTAX_ERROR);
