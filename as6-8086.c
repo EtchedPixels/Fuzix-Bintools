@@ -246,18 +246,22 @@ char *etext[] = {
 	"missing delimiter",		/* 15 */
 	"invalid constant",		/* 16 */
 	"short form out of range",	/* 17 */
-	"cannot index with r0",		/* 18 */
+	"UNUSED",			/* 18 */
 	"address required",		/* 19 */
 	"invalid id",			/* 20 */
-	"register required"		/* 21 */
-	"register must be even",	/* 22 */
+	"bad mode",			/* 21 */
+	"divide by zero",		/* 22 */
 	"constant out of range",	/* 23 */
 	"data in BSS",			/* 24 */
 	"segment overflow",		/* 25 */
-	"data in ZP",			/* 26 */
+	"80816 instruction",		/* 26 */
 	"segment conflict",		/* 27 */
-	"invalid register number",	/* 28 */
-	"divide by zero"		/* 29 */
+	"too many jcc",			/* 28 */
+	"register only"			/* 29 */
+	"word register only"		/* 30 */
+	"byte register only"		/* 31 */
+	"segment register only"		/* 32 */
+	"out of range"			/* 33 */
 };
 
 /*

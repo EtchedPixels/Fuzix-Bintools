@@ -113,17 +113,22 @@ void getaddr(ADDR *ap)
 /* Registers within address specifications. Only BX BP SI DI */
 static unsigned get_reg(void)
 {
+	/* Not quite right as it accepts  b x */
 	int c = getnb();
-	char id[NCPS];
-	getid(id, c);
-	if (strcmp(id, "bx") == 0)
-		return BX;
-	if (strcmp(id, "bp") == 0)
-		return BP;
-	if (strcmp(id, "si") == 0)
-		return SI;
-	if (strcmp(id, "di") == 0)
-		return DI;
+	int c2 =  getnb();
+	if (c == 'b') {
+		if (c2 == 'x')
+			return BX;
+		if (c2 == 'p')
+			return BP;
+	} else if (c2 == 'i') {
+		if (c == 's')
+			return SI;
+		if (c == 'd')
+			return DI;
+	}
+	unget(c2);
+	unget(c);
 	return 0;
 }
 
@@ -210,7 +215,7 @@ void getaddr_mem(ADDR *ap, unsigned *modrm)
 
 	/* Is it a register  ? */
 	r1 = get_reg();
-	if (r1 == -1) {
+	if (r1 == 0) {
 		/* Simple expression for the address */
 		expr1(ap, LOPRI, 0);
 		mod = 0x06;
@@ -250,6 +255,24 @@ void getaddr_mem(ADDR *ap, unsigned *modrm)
 	*modrm = mod;
 }
 
+static void outmod(unsigned modrm, ADDR *ap)
+{
+	outab(modrm);
+	switch(modrm & 0xC0) {
+	case 0x00:	/* no offset, but also includes direct address */
+		if ((modrm & 7) == 6)
+			outraw(ap);
+		break;
+	case 0x40:	/* 8bit offset */
+		/* TODO use low of 16bit */
+		outab(ap->a_value);
+		break;
+	case 0x80:	/* 16bit offset */
+		outraw(ap);
+		break;
+	}
+}
+
 static void need_186(void)
 {
 	if (cputype < 186)
@@ -277,8 +300,10 @@ void asmline(void)
 	char id[NCPS];
 	char id1[NCPS];
 	ADDR a1;
-	unsigned ta1;
-	unsigned mod;
+	ADDR a2;
+	unsigned ta1, ta2;
+	unsigned mod1;
+	unsigned mod2;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
@@ -474,15 +499,15 @@ loop:
 		outab(a1.a_value);
 		break;
 	case TPUSH:
-		getaddr_mem(&a1, &mod);
+		getaddr_mem(&a1, &mod1);
 		ta1 = a1.a_type & TMMODE;
 		if ((a1.a_type & TMADDR) == TMODRM) {
 			/* Only an address is permitted TODO: 186 const */
-			if (mod != 0x06)
+			if (mod1 != 0x06)
 				aerr(BADMODE);
 //			outsegment();
 			outab(0xFF);
-			outab(mod | 0x30);
+			outab(mod1 | 0x30);
 			/* FIXME raw or relraw */
 			outraw(&a1);
 			break;
@@ -497,15 +522,15 @@ loop:
 		}
 		break;
 	case TPOP:
-		getaddr_mem(&a1, &mod);
+		getaddr_mem(&a1, &mod1);
 		ta1 = a1.a_type & TMMODE;
 		if ((a1.a_type & TMADDR) == TMODRM) {
 			/* Only an address is permitted */
-			if (mod != 0x06)
+			if (mod1 != 0x06)
 				aerr(BADMODE);
 //			outsegment();
 			outab(0x8F);
-			outab(mod | 0x30);
+			outab(mod1 | 0x30);
 			/* FIXME raw or relraw */
 			outraw(&a1);
 			break;
@@ -518,6 +543,74 @@ loop:
 			else
 				aerr(BADMODE);
 		}
+		break;
+	case TXCHG:
+		/* Would be almost regular except there is a short form for
+		   AX,reg */
+		getaddr_mem(&a1, &mod1);
+		comma();
+		getaddr_mem(&a2, &mod2);
+		ta1 = a1.a_type & TMMODE;
+		ta2 = a2.a_type & TMMODE;
+		/* Short form using AX */
+		if (a1.a_type == (TWR | AX) && ta2 == TWR) {
+			outab(0x90 | (a2.a_type & TMREG));
+			break;
+		}
+		/* Either way around is the same for XCHG */
+		if (a2.a_type == (TWR | AX) && ta1 == TWR) {
+			outab(0x90 | (a1.a_type & TMREG));
+			break;
+		} else if (ta1 == TWR && ta2 == TWR) {
+			mod1 = 0xC0 | ((a1.a_type & TMREG) << 3) |
+				(a2.a_type & TMREG);
+			outab(0x87);
+			outab(mod1);
+			break;
+		} else if (ta1 == TBR && ta2 == TBR) {
+			mod1 = 0xC0 | ((a1.a_type & TMREG) << 3) |
+				(a2.a_type & TMREG);
+			outab(0x86);
+			outab(mod1);
+			break;
+		} else if ((a1.a_type & TMADDR) == TMODRM) {
+			/* addr, reg */
+			if ((a2.a_type & TMMODE) == TWR) {
+				mod1 |= (a2.a_type & TMREG) << 3;
+//				outsegment();
+				outab(0x87);
+				/* TODO: block xchg with immediate and some  others like that */
+				outmod(mod1, &a1);
+				break;
+			}
+			if ((a2.a_type & TMMODE) == TBR) {
+				mod1 |= (a2.a_type & TMREG) << 3;
+//				outsegment();
+				outab(0x86);
+				/* TODO: block xchg with immediate and some  others like that */
+				outmod(mod1, &a1);
+				break;
+			}
+		} else if ((a2.a_type & TMADDR) == TMODRM) {
+			/* reg, addr */
+			if ((a1.a_type & TMMODE) == TWR) {
+				mod2 |= (a1.a_type & TMREG) << 3;
+//				outsegment();
+				outab(0x87);
+				/* TODO: block xchg with immediate and some  others like that */
+				outmod(mod2, &a1);
+				break;
+			}
+			if ((a1.a_type & TMMODE) == TBR) {
+				mod2 |= (a1.a_type & TMREG) << 3;
+//				outsegment();
+				outab(0x86);
+				/* TODO: block xchg with immediate and some  others like that */
+				outmod(mod2, &a1);
+				break;
+			}
+		}
+		aerr(BADMODE);
 		break;
 	default:
 		aerr(SYNTAX_ERROR);
