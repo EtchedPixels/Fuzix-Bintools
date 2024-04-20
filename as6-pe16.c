@@ -227,7 +227,7 @@ char *etext[] = {
 	"cannot index with r0",		/* 18 */
 	"address required",		/* 19 */
 	"invalid id",			/* 20 */
-	"register required"		/* 21 */
+	"register required",		/* 21 */
 	"register must be even",	/* 22 */
 	"constant out of range",	/* 23 */
 	"data in BSS",			/* 24 */
