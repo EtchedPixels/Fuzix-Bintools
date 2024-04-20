@@ -1,5 +1,5 @@
 /*
- * 6809 assembler.
+ * Perkin Elmer 16 assembler.
  * Basic symbol tables.
  * Contain all of the instructions
  * and register names.
