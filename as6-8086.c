@@ -105,7 +105,7 @@ SYM	sym[] = {
 	 {	0,	"idiv",		TDIV,		0xF638	},
 	 /* Extra 186 forms */
 	 {	0,	"imul",		TMUL,		0xF628	},
-	 {	0,	"in",		TIN,		0xE4	},
+	 {	0,	"in",		TIO,		0xE4	},
 	 {	0,	"inc",		TRM,		0x40	},
 	 {	0,	"int",		TIMM8,		0xCC	},
 	 {	0,	"into",		TIMPL,		0xCE	},
@@ -163,7 +163,7 @@ SYM	sym[] = {
 	 {	0,	"nop",		TIMPL,		0x90	},
 	 {	0,	"not",		TRM,		0xF610	},
 	 {	0,	"or",		TMEM,		0x08	},
-	 {	0,	"out",		TOUT,		0xE6	},
+	 {	0,	"out",		TIO,		0xE6	},
 	 /* Like TRM but also seg reg */
 	 {	0,	"pop",		TPOP,		0x8F	},
 	 {	0,	"popf",		TIMPL,		0x9D	},

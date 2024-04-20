@@ -209,7 +209,7 @@ void getaddr_mem(ADDR *ap, unsigned *modrm)
 		else if ((ap->a_type & TMMODE) == TSR) {
 			/* Special */
 		} else
-			ap->a_flags |= TIMMED;
+			ap->a_type |= TIMMED;
 		return;
 	}
 
@@ -611,6 +611,26 @@ loop:
 			}
 		}
 		aerr(BADMODE);
+		break;
+	case TIO:
+		getaddr_mem(&a1, &mod1);
+		comma();
+		getaddr_mem(&a2, &mod2);
+		if (a1.a_type == (TWR|AX))
+			opcode |= 1;
+		else if (a1.a_type != (TBR|AL))
+			aerr(BADMODE);
+		if ((a2.a_type & TMADDR) == TIMMED) {
+			constify(&a2);
+			istuser(&a2);
+			outab(opcode);
+			outrab(&a2);
+			break;
+		} else if (a2.a_type == (TWR|DX)) {
+			outab(opcode | 0x08);
+			break;
+		} else
+			aerr(BADMODE);
 		break;
 	default:
 		aerr(SYNTAX_ERROR);

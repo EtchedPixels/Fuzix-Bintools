@@ -1623,8 +1623,8 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TRM	0x1500			/* Single reg/mem */
 #define TDIV	0x1600
 #define TMUL	0x1700
-#define	TIN	0x1800
-#define TOUT	0x1900
+#define	TIO	0x1800
+#define TMOV	0x1900			/* All the mov forms */
 #define TIMM8	0x1A00
 #define TJCC	0x1B00
 #define TJMP	0x1C00
@@ -1640,7 +1640,6 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define T186IMPLS	0x2600
 #define TENTER	0x2700
 #define TJCX	0x2800			/* Like JCC but no auto-extend */
-#define TMOV	0x2900			/* All the MOV forms */
 
 /*
  * Registers. Encoding order matches instructions
