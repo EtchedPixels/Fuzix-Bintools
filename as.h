@@ -1572,6 +1572,137 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define AREQUIRED	32
 #define AEAREQUIRED	33
 
+#elif TARGET_8086
+
+typedef	uint16_t	VALUE;		/* For symbol values */
+
+#define ARCH OA_8086
+#define ARCH_FLAGS 0
+#define ARCH_CPUFLAGS 0
+
+/*
+ * Types. These are used
+ * in both symbols and in address
+ * descriptions. Observe the way the
+ * symbol flags hide in the register
+ * field of the address.
+ */
+#define	TMREG	0x000F			/* Register code */
+#define	TMMDF	0x0001			/* Multidef */
+#define	TMASG	0x0002			/* Defined by "=" */
+#define	TMMODE	0xFF00			/* Mode */
+#define	TMINDIR	0x8000			/* Indirect flag in mode */
+#define TPUBLIC	0x0080			/* Exported symbol */
+#define TMADDR	0x00F0			/* Addressing mode bits */
+
+#define TDIRECT	0x0010			/* Direct page */
+#define TINDEX	0x0020			/* Indexed */
+#define TIMMED	0x0030			/* Immediate */
+
+#define	TNEW	0x0000			/* Virgin */
+#define	TUSER	0x0100			/* User name */
+#define	TBR	0x0200			/* Byte register */
+#define	TWR	0x0300			/* Word register */
+#define	TSR	0x0400			/* Special register */
+#define	TDEFB	0x0500			/* defb */
+#define	TDEFW	0x0600			/* defw */
+#define	TDEFS	0x0700			/* defs */
+#define	TDEFM	0x0800			/* defm */
+#define	TORG	0x0900			/* org */
+#define	TEQU	0x0A00			/* equ */
+#define	TCOND	0x0B00			/* conditional */
+#define	TENDC	0x0C00			/* end conditional */
+#define TSEGMENT 0x0D00			/* segments by number */
+#define TEXPORT 0x0E00			/* symbol export */
+#define TCC	0x0F00
+/* CPU specific codes */
+#define TIMPL	0x1000			/* Implicit */
+#define TPREFIX	0x1100			/* Prefix byte */
+#define TSMOD	0x1200			/* Size modifier */
+#define TMEM	0x1300			/* Usual two arg */
+#define TIMPLS	0x1400			/* Implicit but sized */
+#define TRM	0x1500			/* Single reg/mem */
+#define TDIV	0x1600
+#define TMUL	0x1700
+#define	TIN	0x1800
+#define TOUT	0x1900
+#define TIMM8	0x1A00
+#define TJCC	0x1B00
+#define TJMP	0x1C00
+#define TCALL	0x1D00
+#define TLEA	0x1E00
+#define TLDS	0x1F00
+#define TPOP	0x2000
+#define TPUSH	0x2100
+#define TSHIFT	0x2200			/* Shifts and rotates */
+#define TXCHG	0x2300
+#define T186RM	0x2400
+#define T186IMPL	0x2500
+#define T186IMPLS	0x2600
+#define TENTER	0x2700
+#define TJCX	0x2800			/* Like JCC but no auto-extend */
+#define TMOV	0x2900			/* All the MOV forms */
+
+/*
+ * Registers. Encoding order matches instructions
+ */
+
+#define	AL		0
+#define	CL		1
+#define DL		2
+#define BL		3
+#define AH		4
+#define CH		5
+#define DH		6
+#define BH		7
+
+#define AX		0
+#define CX		1
+#define DX		2
+#define BX		3
+#define SP		4
+#define BP		5
+#define SI		6
+#define DI		7
+
+#define ES		0
+#define	CS		1
+#define SS		2
+#define DS		3
+
+/*
+ *	Error message numbers
+ */
+
+#define BRACKET_EXPECTED 1
+#define MISSING_COMMA	2
+#define SQUARE_EXPECTED 3
+#define PERCENT_EXPECTED 4
+#define UNEXPECTED_CHR	10
+#define PHASE_ERROR	11
+#define MULTIPLE_DEFS	12
+#define SYNTAX_ERROR	13
+#define MUST_BE_ABSOLUTE	14
+#define MISSING_DELIMITER 15
+#define INVALID_CONST	16
+#define JMP_RANGE	17
+#define INDX_RANGE	18
+#define ADDR_REQUIRED	19
+#define INVALID_ID	20
+#define BADMODE		21
+#define DIVIDE_BY_ZERO	22
+#define CONSTANT_RANGE  23
+#define DATA_IN_BSS	24
+#define SEGMENT_OVERFLOW 25
+#define NEED_186	26
+#define	SEGMENT_CLASH	27
+#define TOOMANYJCC	28
+#define REGONLY		29
+#define WREGONLY	30
+#define BREGONLY	31
+#define SREGONLY	32
+#define RANGE		33
+
 #elif TARGET_EE200
 
 typedef	uint16_t	VALUE;		/* For symbol values */

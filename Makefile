@@ -18,7 +18,9 @@ test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
 
 todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
-      aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
+      aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 \
+      as8086 ld8086 nm8086 osize8086 dumprelocs8086
+      
 
 CCROOT ?=/opt/fcc/
 
@@ -150,6 +152,21 @@ osize8080: $(HDR) osize.c
 dumprelocs8080: $(HDR) dumprelocs.o
 	cc -o dumprelocs8080 dumprelocs.o
 
+as8086: $(HDR) $(CORE) as1-8086.c as6-8086.c
+	cc  -DTARGET_8086 -o as8086 $(CORE) as1-8086.c as6-8086.c
+
+ld8086: $(HDR) ld.c
+	cc -o ld8086 ld.c
+
+nm8086: $(HDR) nm.c
+	cc -o nm8086 nm.c
+
+osize8086: $(HDR) osize.c
+	cc -o osize8086 osize.c
+
+dumprelocs8086: $(HDR) dumprelocs.o
+	cc -o dumprelocs8086 dumprelocs.o
+
 as9900: $(HDR) $(CORE) as1-tms9900.c as6-tms9900.c
 	cc  -DTARGET_TMS9900 -o as9900 $(CORE) as1-tms9900.c as6-tms9900.c
 
@@ -280,6 +297,7 @@ clean:
 	rm -f as8060 ld8060 nm8060 osize8060 dumprelocs8060
 	rm -f as8070 ld8070 nm8070 osize8070 dumprelocs8070
 	rm -f as8080 ld8080 nm8080 osize8080 dumprelocs8080
+	rm -f as8086 ld8086 nm8086 osize8086 dumprelocs8086
 	rm -f as9900 ld9900 nm9900 osize9900 dumprelocs9900
 	rm -f asee200 ldee200 nmee200 osizeee200 dumprelocsee200
 	rm -f ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11
@@ -311,6 +329,7 @@ installtest: test
 	mkdir -p /opt/fcc/bin
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
+	cp as8086 ld8086 nm8086 osize8086 dumprelocs8086 $(CCROOT)/bin
 	cp ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 $(CCROOT)/bin
 	cp asnova ldnova nmnova osizenova dumprelocsnova $(CCROOT)/bin
 	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
