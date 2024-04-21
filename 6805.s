@@ -103,3 +103,63 @@ fred:
 	tstx
 	txa
 	wait
+;
+;	HC08
+;
+	.hc08
+
+	asl ,sp
+	asl ,s
+	asl 5,sp
+	asl 10,s
+
+moo:
+	sta 5,sp
+	stx 5,s
+	stx ,sp
+	stx ,s
+	lda 121,sp
+	lda 1,sp
+	lda ,sp
+	lda ,s
+
+	ais #1
+	aix #2
+	bge moo
+	bgt moo
+	ble moo
+	blt moo
+	cbeq @foo,moo
+	cbeqa #12,moo
+	cbeqx #1,moo
+	cbeq ,x+,moo
+	cbeq 5,x+,moo
+	cbeq 6,sp,moo
+	cphx #0x1234
+	cphx @foo
+	daa
+	dbnz @foo,moo
+	dbnza moo
+	dbnzx moo
+	dbnz ,x,moo
+	dbnz 5,x,moo
+	div
+	ldhx @foo
+	ldhx #0x1234
+	mov #5,@foo
+	mov @foo,@foo
+	mov ,x+,@foo
+	mov x+,@foo
+	mov @foo,,x+
+	nsa
+	psha
+	pshh
+	pshx
+	pula
+	pulh
+	pulx
+	stx @foo
+	tap
+	tpa
+	tsx
+	txs

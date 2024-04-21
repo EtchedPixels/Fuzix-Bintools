@@ -11,6 +11,7 @@
  */
 
 static int cputype;
+
 /* FIXME: we should malloc/realloc this on non 8bit machines */
 static uint8_t reltab[1024];
 static unsigned int nextrel;
@@ -111,10 +112,15 @@ static unsigned index_size(ADDR *ap)
  * Exits directly to "qerr" if
  * there is no address field or
  * if the syntax is bad.
+ *
+ * TODO: 68HC08 modes
+ *	n,x+
+ *	x+  (same as ,x+)
+ *	n,s{p}
  */
 void getaddr(ADDR *ap)
 {
-	int c;
+	int c, nc;
 	int dp = 0;
 
 	ap->a_type = 0;
@@ -143,11 +149,39 @@ void getaddr(ADDR *ap)
 	/* Our own syntax for DP form labels */
 	if (c == '@')
 		dp = 1;
-	/* Allow naked ",x" form */
+	/* X+ is an allowed 68HC08 form for ,X+ but not X for ,X */
+	else if (c == 'x') {
+		nc = getnb();
+		if (nc == '+') {
+			ap->a_type = TXPLUS | TUSER;
+			ap->a_value = 0;
+			ap->a_segment = ABSOLUTE;
+			return;
+		}
+		unget(nc);
+	}
+	/* Allow naked ",x"  and ",s{p}" form */
 	else if (c == ',') {
 		c = getnb();
-		if (tolower(c) != 'x')
+		if (c == 's') {
+			nc = getnb();
+			if (nc != 'p')
+				unget(nc);
+			ap->a_type = TSP | TUSER;
+			ap->a_value = 0;
+			ap->a_segment = ABSOLUTE;
+			return;
+		}
+		if (c != 'x')
 			aerr(SYNTAX_ERROR);
+		c = getnb();
+		if (c == '+') {	
+			ap->a_type = TXPLUS | TUSER;
+			ap->a_value = 0;
+			ap->a_segment = ABSOLUTE;
+			return;
+		}
+		unget(c);
 		ap->a_type = TINDEX | TUSER;
 		ap->a_value = 0;
 		ap->a_segment = ABSOLUTE;
@@ -165,13 +199,29 @@ void getaddr(ADDR *ap)
 
 	c = getnb();
 	
-	/* foo,[x] */
+	/* foo,[x|sp] */
 	if (c == ',') {
 		c = getnb();
-		if (tolower(c) == 'x') {
+		if (c == 'x') {
 			istuser(ap);
 			constify(ap);
-			ap->a_type |= TINDEX;
+			nc = getnb();
+			if (nc == '+')
+				ap->a_type = TXPLUS;
+			else {
+				unget(nc);
+				ap->a_type |= TINDEX;
+			}
+			return;
+		}
+		if (c == 's') {
+			/* Accept S or SP */
+			nc = getnb();
+			if (nc != 'p')
+				unget(nc);
+			istuser(ap);
+			constify(ap);
+			ap->a_type |= TSP;
 			return;
 		}
 		unget(c);
@@ -184,6 +234,13 @@ void getaddr(ADDR *ap)
 		ap->a_type = TUSER|TMINDIR;
 }
 
+static void need_hc08(void)
+{	
+	if (cputype < 6808)
+		qerr(BADCPU);
+	if (pass == 3)
+		cpu_flags |= OA_6805_HC08;
+}
 
 /*
  * Assemble one line.
@@ -204,6 +261,7 @@ void asmline(void)
 	char id1[NCPS];
 	ADDR a1;
 	ADDR a2;
+	unsigned ta1, ta2;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
@@ -352,14 +410,12 @@ loop:
 		break;
 
 	case TSETCPU:
-		getaddr(&a1);
-		constify(&a1);
-		istuser(&a1);
-		if (a1.a_value != 6303 && a1.a_value != 6800 && a1.a_value != 6803)
-			aerr(SYNTAX_ERROR);
-		cputype = a1.a_value;
+		cputype = opcode;
 		break;
 
+	case T08IMPL:
+		need_hc08();
+		/* Fall through */
 	case TIMPL:
 		outab(opcode);
 		break;
@@ -400,6 +456,10 @@ loop:
 			aerr(BRA_RANGE);
 		outab(disp);
 		break;
+
+	case T08REL8:
+		need_hc08();
+		/* Fall through */
 	case TREL8:
 		getaddr(&a1);
 		/* FIXME: do wo need to check this is constant ? */
@@ -412,6 +472,9 @@ loop:
 		outab(disp);
 		break;
 
+	case T08REL:
+		need_hc08();
+		/* Fall through */
 	case TREL:
 		/* Relative branch or reverse and jump for range */
 
@@ -485,13 +548,66 @@ loop:
 				break;
 			}
 			break;
-		default:
+		case TSP:
+			need_hc08();
+			switch(index_size(&a1)) {
+			case 0:
+			case 1:
+				outab(0x9E);
+				outab(opcode | 0xE0);
+				outrab(&a1);
+				break;
+			case 2:
+				outab(0x9E);
+				outab(opcode | 0xD0);
+				outraw(&a1);
+				break;
+			}
+			break;
+		case 0:
 			outab(opcode | 0xC0);
 			outraw(&a1);
+			break;
+		default:
+			aerr(BADMODE);
 			break;
 		}
 		break;
 	case TJMP:
+		getaddr(&a1);
+		switch(a1.a_type & TMADDR) {
+		case TIMMED:
+			aerr(ADDR_REQUIRED);
+			break;
+		case TDIRECT:
+			outab(opcode | 0xB0);
+			outrab(&a1);
+			break;
+		case TINDEX:
+			switch(index_size(&a1)) {
+			case 0:
+				outab(opcode | 0xF0);
+				break;
+			case 1:
+				outab(opcode | 0xE0);
+				outrab(&a1);
+				break;
+			case 2:
+				outab(opcode | 0xD0);
+				outraw(&a1);
+				break;
+			}
+			break;
+		case 0:
+			outab(opcode | 0xC0);
+			outraw(&a1);
+			break;
+		/* No SP forms on jmp/jsr */
+		default:
+			aerr(BADMODE);
+			break;
+		}
+		break;
 	case TMEMNI:
 		getaddr(&a1);
 		switch(a1.a_type & TMADDR) {
@@ -517,9 +633,28 @@ loop:
 				break;
 			}
 			break;
-		default:
+		case 0:
 			outab(opcode | 0xC0);
 			outraw(&a1);
+			break;
+		case TSP:
+			need_hc08();
+			switch(index_size(&a1)) {
+			case 0:
+			case 1:
+				outab(0x9E);
+				outab(opcode | 0xE0);
+				outrab(&a1);
+				break;
+			case 2:
+				outab(0x9E);
+				outab(opcode | 0xD0);
+				outraw(&a1);
+				break;
+			}
+			break;
+		default:
+			aerr(BADMODE);
 			break;
 		}
 		break;
@@ -545,9 +680,194 @@ loop:
 				break;
 			}
 			break;
+		case TSP:
+			need_hc08();
+			switch(index_size(&a1)) {
+			case 0:
+			case 1:
+				outab(0x9E);
+				outab(opcode | 0x60);
+				outrab(&a1);
+				break;
+			case 2:
+				aerr(CONSTANT_RANGE);
+				break;
+			}
+			break;
 		default:
 			aerr(BADMODE);
 		}
+		break;
+	case TIMM8:
+		need_hc08();
+		getaddr(&a1);
+		if ((a1.a_type & TMADDR) != TIMMED)
+			aerr(BADMODE);
+		if (a1.a_value > 127 || ((int16_t)a1.a_value) < -128)
+			aerr(CONSTANT_RANGE);
+		outrab(&a1);
+		break;
+	case TIM16:
+		need_hc08();
+		getaddr(&a1);
+		switch(a1.a_type & TMADDR) {
+		case TDIRECT:
+			outab(opcode + 0x10);
+			outrab(&a1);
+			break;
+		case TIMMED:
+			outab(opcode);
+			outraw(&a1);
+			break;
+		default:
+			aerr(BADMODE);
+		}
+		break;
+	case TDIR:
+		need_hc08();
+		getaddr(&a1);
+		if ((a1.a_type & TMADDR) != TDIRECT)
+			aerr(BADMODE);
+		outrab(&a1);
+		break;
+	case TCBEQR:
+		need_hc08();
+		getaddr(&a1);
+		comma();
+		getaddr(&a2);
+		if ((a1.a_type & TMADDR) != TIMMED)
+			aerr(BADMODE);
+		/* TODO: do we need this check on bra etc */
+//		if ((a2.a_type & TMMODE) != TUSER)
+//			aerr(BADMODE);
+		disp = a2.a_value - dot[segment]-3;
+		/* Only on pass 3 do we know the correct offset for a forward branch
+		   to a label where other stuff with Jcc has been compacted */
+		if (pass == 3 && (disp<-128 || disp>127 || segment_incompatible(&a2)))
+			aerr(BRA_RANGE);
+		outab(opcode);
+		outrab(&a1);
+		outab(disp);
+		break;
+	case TCBEQ:
+		need_hc08();
+		getaddr(&a1);
+		comma();
+		getaddr(&a2);
+		/* TODO: check a2 is valid rel */
+		ta1 = a1.a_type & TMADDR;
+		if (ta1 == TXPLUS) {
+			switch(index_size(&a1)) {
+			case 0:
+				outab(opcode | 0x70);
+				break;
+			case 1:
+				outab(opcode | 0x60);
+				outrab(&a1);
+				break;
+			default:
+				aerr(CONSTANT_RANGE);
+				break;
+			}
+		} else if (ta1 == TSP) {
+			switch(index_size(&a1)) {
+			case 0:
+			case 1:
+				outab(0x9E);
+				outab(opcode | 0x60);
+				outrab(&a1);
+				break;
+			default:
+				aerr(CONSTANT_RANGE);
+				break;
+			}
+		} else if (ta1 == TDIRECT) {
+			outab(opcode | 0x31);
+			outrab(&a1);
+		/* TODO: sp forms */
+		} else
+			aerr(BADMODE);
+		disp = a2.a_value - dot[segment] - 1;
+		/* Only on pass 3 do we know the correct offset for a forward branch
+		   to a label where other stuff with Jcc has been compacted */
+		if (pass == 3 && (disp<-128 || disp>127 || segment_incompatible(&a2)))
+			aerr(BRA_RANGE);
+		outab(disp);
+		break;
+	case TDBNZ:
+		need_hc08();
+		getaddr(&a1);
+		comma();
+		getaddr(&a2);
+//		if ((a2.a_type & TMMODE) != TUSER)
+//			aerr(BADMODE);
+		switch(a1.a_type & TMADDR) {
+		case TDIRECT:
+			outab(opcode | 0x30);
+			outrab(&a1);
+			break;
+		case TINDEX:
+			switch(index_size(&a1)) {
+			case 0:
+				outab(opcode | 0x70);
+				break;
+			case 1:
+				outab(opcode | 0x6B);
+				outrab(&a1);
+				break;
+			case 2:
+				aerr(CONSTANT_RANGE);
+				break;
+			}
+			break;
+		/* TODO sp mode */
+		default:
+			aerr(BADMODE);
+		}
+		disp = a2.a_value - dot[segment] - 1;
+		/* Only on pass 3 do we know the correct offset for a forward branch
+		   to a label where other stuff with Jcc has been compacted */
+		if (pass == 3 && (disp<-128 || disp>127 || segment_incompatible(&a2)))
+			aerr(BRA_RANGE);
+		outab(disp);
+		break;
+	case TMOV:
+		need_hc08();
+		getaddr(&a1);
+		comma();
+		getaddr(&a2);
+		ta1 = a1.a_type & TMADDR;
+		ta2 = a2.a_type & TMADDR;
+		/* mov x+,@d */
+		if (ta1 == TXPLUS && ta2 == TDIRECT) {
+			if (a1.a_value)
+				aerr(CONSTANT_RANGE);
+			outab(0x7E);
+			outrab(&a2);
+			break;
+		}
+		/* mov @d,x+ */
+		if (ta1 == TDIRECT && ta2 == TXPLUS) {
+			if (a2.a_value)
+				aerr(CONSTANT_RANGE);
+			outab(0x5E);
+			outrab(&a1);
+			break;
+		}
+		/* mov d,d */
+		if (ta1 == TDIRECT && ta2 == TDIRECT) {
+			outab(0x4E);
+			outrab(&a1);
+			outrab(&a2);
+			break;
+		}
+		if (ta2 == TDIRECT && ta1 == TIMMED) {
+			outab(0x6E);
+			outrab(&a1);
+			outrab(&a2);
+			break;
+		}
+		aerr(BADMODE);
 		break;
 	default:
 		aerr(SYNTAX_ERROR);

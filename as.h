@@ -875,6 +875,8 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TDIRECT	0x0010			/* Direct page */
 #define TINDEX	0x0020			/* Indexed */
 #define TIMMED	0x0030			/* Immediate */
+#define TXPLUS	0x0040			/* X+ 68HC08 */
+#define TSP	0x0050			/* ,SP forms 68HC08 */
 
 #define	TNEW	0x0000			/* Virgin */
 #define	TUSER	0x0100			/* User name */
@@ -903,6 +905,17 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TBITREL	0x1700
 #define TREL	0x1800
 #define TREL8	0x1900
+/* Formats used in 6808 instructions */
+#define TIMM8	0x1A00			/* s8 */
+#define T08REL	0x1B00			/* TREL 68HC08 only */
+#define TCBEQ	0x1C00
+#define TIM16	0x1D00			/* Immediate or extended only */
+#define T08IMPL	0x1E00			/* Implicit 68HC08 only */
+#define TDBNZ	0x1F00
+#define TMOV	0x2000			/* Just weird */
+#define TDIR	0x2100			/* Direct only */
+#define TCBEQR	0x2200
+#define T08REL8	0x2300
 
 /*
  *	Error message numbers

@@ -40,7 +40,10 @@ SYM	sym[] = {
 	{	0,	".literal",	TSEGMENT,	LITERAL	},
 	{	0,	".commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	".buffers",	TSEGMENT,	BUFFERS	},
-	{	0,	".setcpu",	TSETCPU,	XXXX	},
+
+	{	0,	".05",		TSETCPU,	6805	},
+	{	0,	".hc05",	TSETCPU,	6805	},
+	{	0,	".hc08",	TSETCPU,	6808	},
 
 	{	0,	"adc",		TMEM,		0x09	},
 	{	0,	"add",		TMEM,		0x0B	},
@@ -136,7 +139,41 @@ SYM	sym[] = {
 	{	0,	"swi",		TIMPL,		0x83	},
 	{	0,	"tax",		TIMPL,		0x97	},
 	{	0,	"txa",		TIMPL,		0x9F	},
-	{	0,	"wait",		TIMPL,		0x8F	}
+	{	0,	"wait",		TIMPL,		0x8F	},
+
+	/* 68HC08 additions */
+	/* As well as these the HC08 adds n,SP forms to some instructions - not entirely
+	   consistently */
+	/* ais/aix sign extend an 8bit signed value */
+	{	0,	"ais",		TIMM8,		0xA7	},
+	{	0,	"aix",		TIMM8,		0xAF	},
+	{	0,	"bge",		T08REL,		0x90	},
+	{	0,	"bgt",		T08REL,		0x92	},
+	{	0,	"ble",		T08REL,		0x93	},
+	{	0,	"blt",		T08REL,		0x91	},
+	{	0,	"cbeq",		TCBEQ,		0x01	},
+	{	0,	"cbeqa",	TCBEQR,		0x41	},
+	{	0,	"cbeqx",	TCBEQR,		0x51	},
+	{	0,	"cphx",		TIM16,		0x65	},
+	{	0,	"daa",		T08IMPL,	0x72	},
+	{	0,	"dbnz",		TDBNZ,		0x0B	},
+	{	0,	"dbnza",	T08REL8,	0x4B	},
+	{	0,	"dbnzx",	T08REL8,	0x5B	},
+	{	0,	"div",		TIMPL,		0x52	},
+	{	0,	"ldhx",		TIM16,		0x45	},
+	{	0,	"mov",		TMOV,		0x0E	},
+	{	0,	"nsa",		T08IMPL,	0x62	},
+	{	0,	"psha",		T08IMPL,	0x87	},
+	{	0,	"pshh",		T08IMPL,	0x8B	},
+	{	0,	"pshx",		T08IMPL,	0x89	},
+	{	0,	"pula",		T08IMPL,	0x86	},
+	{	0,	"pulh",		T08IMPL,	0x8A	},
+	{	0,	"pulx",		T08IMPL,	0x88	},
+	{	0,	"sthx",		TDIR,		0x35	},
+	{	0,	"tap",		T08IMPL,	0x84	},
+	{	0,	"tpa",		T08IMPL,	0x85	},
+	{	0,	"tsx",		T08IMPL,	0x95	},
+	{	0,	"txs",		T08IMPL,	0x94	}
 };
 
         

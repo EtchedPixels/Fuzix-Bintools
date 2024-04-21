@@ -35,6 +35,7 @@ struct objhdr
 #define OA_PE16		14	/* Interdata/Perkin Elmer 16bit */
 #define OA_8086		15
 #define OA_GB		16	/* Gameboy */
+#define	OA_6805		17	/* 6805/05/HC08 - 6808 is unrelated */
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */
@@ -77,6 +78,8 @@ struct objhdr
 
 #define OA_8086_186	1
 #define OA_8086_286	2
+
+#define OA_6805_HC08	1
 
     uint16_t o_unused;		/* So it packs right */
     uint32_t o_segbase[OSEG];
