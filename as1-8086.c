@@ -448,6 +448,11 @@ loop:
 			outab(0);
 		break;
 
+	case TSETCPU:
+		cputype = opcode;
+		/* TODO set obj hdr ? */
+		break;
+
 	case TPREFIX:
 		outab(opcode);
 		goto loop;
@@ -696,6 +701,31 @@ loop:
 		outab(opcode);
 		mod2 |= (a1.a_type & TMREG) << 3;
 		outmod(mod2, &a2);
+		break;
+	case TDIV:
+	case TMUL:
+		getaddr_mem(&a1, &mod1);
+		/* TODO 186 const form */
+		/* TODO size detection for mem form */
+		if ((a1.a_type & TMMODE) == TWR) {
+			/* Word sized */
+			outab((opcode >> 8) | 1);
+			mod1 = 0xC0 | (opcode & 0xFF) | (a1.a_type & TMREG);
+			outmod(mod1, &a1);
+			break;
+		}
+		if ((a1.a_type & TMMODE)== TBR) {
+			/* Byte sized */
+			outab(opcode >> 8);
+			mod1 = 0xC0 | (opcode & 0xFF) | (a1.a_type & TMREG);
+			outmod(mod1, &a1);
+			break;
+		}
+		if ((a1.a_type & TMADDR) != TMODRM)
+			aerr(BADMODE);
+		/* TODO size handling */
+		outab(opcode >> 8);
+		outmod(mod1, &a1);
 		break;
 	default:
 		aerr(SYNTAX_ERROR);

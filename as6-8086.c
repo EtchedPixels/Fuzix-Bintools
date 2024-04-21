@@ -46,6 +46,9 @@ SYM	sym[] = {
 	{	0,	".commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	".buffers",	TSEGMENT,	BUFFERS	},
 
+	{	0,	".86",		TSETCPU,	86	},
+	{	0,	".186",		TSETCPU,	186	},
+
 	{	0,	"al",		TBR,		AL	},
 	{	0,	"cl",		TBR,		CL	},
 	{	0,	"dl",		TBR,		DL	},

@@ -1,3 +1,5 @@
+	.86
+
 	aaa
 	aad
 	aam
@@ -21,10 +23,13 @@
 	dec bx
 	dec al
 	dec [fred]
-;	div ax,
+	div bx
+	div [fred]
 	hlt
-;	idiv ax,
-;	imul ax,
+	idiv bx
+	idiv [fred]
+	imul cx
+	imul [fred]
 	in ax,3
 	in ax,dx
 	in al,5
@@ -32,7 +37,7 @@
 	inc ax
 	dec al
 	inc [fred]
-;	int 4
+	int 4
 	into
 	iret
 fred:
@@ -82,7 +87,8 @@ foo:
 ;	movs
 	movsb
 	movsw
-;	mul ax,
+	mul ax
+	mul [fred]
 	neg al
 	neg ax
 	neg [fred]
@@ -138,14 +144,17 @@ foo:
 	xchg [_fred],ax
 	xlat
 ;	xor
+
+	.186
+
 ;	bound
 ;	enter 0,0
 ;	ins
-;	insb
-;	insw
-;	leave
+	insb
+	insw
+	leave
 ;	outs
-;	outsb
-;	outsw
-;	popa
-;	pusha
+	outsb
+	outsw
+	popa
+	pusha
