@@ -142,7 +142,7 @@ SYM	sym[] = {
 	 {	0,	"jmp",		TJMP,		0x00	},
 	 {	0,	"lahf",		TIMPL,		0x9F	},
 	 {	0,	"lds",		TLDS,		0xC5	},
-	 {	0,	"lea",		TLEA,		0x00	},
+	 {	0,	"lea",		TLEA,		0x8D	},
 	 {	0,	"les",		TLDS,		0xC4	},
 	 {	0,	"lock",		TPREFIX,	0xF0	},
 	 {	0,	"lods",		TIMPLS,		0xAC	},

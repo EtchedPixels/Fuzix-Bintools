@@ -674,6 +674,29 @@ loop:
 		}
 		aerr(BADMODE);
 		break;
+	case TLDS:	/* Segment load, must be a memory address */
+		getaddr_mem(&a1, &mod1);
+		if ((a1.a_type & TMADDR) != TMODRM)
+			aerr(BADMODE);
+//		outsegment();
+		outab(opcode);
+		/* 8086 manual appears to be wrong here as it talks about
+		   reg and r/m but here is no reg */
+		outmod(mod1, &a1);
+		break;
+	case TLEA:	/* Must be reg, memory */
+		getaddr(&a1);
+		if ((a1.a_type & TMMODE) != TWR)
+			aerr(BADMODE);
+		comma();
+		getaddr_mem(&a2, &mod2);
+		if ((a2.a_type & TMADDR) != TMODRM)
+			aerr(BADMODE);
+		/* segment has no meaning for lea */
+		outab(opcode);
+		mod2 |= (a1.a_type & TMREG) << 3;
+		outmod(mod2, &a2);
+		break;
 	default:
 		aerr(SYNTAX_ERROR);
 	}

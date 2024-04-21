@@ -65,9 +65,9 @@ fred:
 	jz fred
 ;	jmp fred
 	lahf
-;	lds
-;	lea ax,[fred]
-;	les
+	lds [fred]
+	lea ax,[fred]
+	les [fred]
 	lock nop
 ;	lods
 	lodsb
