@@ -705,6 +705,7 @@ loop:
 	case TDIV:
 	case TMUL:
 		getaddr_mem(&a1, &mod1);
+//		outsegment();
 		/* TODO 186 const form */
 		/* TODO size detection for mem form */
 		if ((a1.a_type & TMMODE) == TWR) {
@@ -726,6 +727,114 @@ loop:
 		/* TODO size handling */
 		outab(opcode >> 8);
 		outmod(mod1, &a1);
+		break;
+	case TSHIFT:
+		/* TODO: 186 forms */
+		getaddr_mem(&a1, &mod1);
+//		outsegment();
+		if ((a1.a_type & TMMODE) == TWR) {
+			mod1 = 0xC0 | opcode | (a1.a_type & TMREG);
+			outab((opcode >> 8) | 1);
+			outmod(mod1, &a1);
+			break;
+		}
+		if ((a1.a_type & TMMODE) == TBR) {
+			mod1 = 0xC0 | opcode | (a1.a_type & TMREG);
+			outab(opcode >> 8);
+			outmod(mod1, &a1);
+			break;
+		}
+		if ((a1.a_type & TMADDR) != TMODRM)
+			aerr(BADMODE);
+		/* TODO size handling */
+		outab(opcode >> 8);
+		outmod(mod1, &a1);
+		break;
+	case TMEM:
+		/* These instructions have 3 forms (with 2 sizes) */
+		/* 00XXX0DW modrm disp disp */
+		/* 00XXX10W immed (AL or AX, form) */
+		/* 100000SW mod XXX r/m modrm disp immediate */
+		getaddr_mem(&a1, &mod1);
+		comma();
+		getaddr_mem(&a2, &mod2);
+		ta1 = a1.a_type & TMMODE;
+		ta2 = a2.a_type & TMMODE;
+//		outsegment();
+		/* Short forms */
+		if (a1.a_type == (TWR|AX) && a2.a_type == (TUSER|TIMMED)) {
+			outab(opcode|5);
+			outraw(&a2);
+			break;
+		}
+		if (a1.a_type == (TBR|AL) && a2.a_type == (TUSER|TIMMED)) {
+			outab(opcode|4);
+			outrab(&a2);
+			break;
+		}
+		/* Immediate forms */
+		if (ta1 == TWR && a2.a_type == (TUSER|TIMMED)) {
+			/* FIXME: S bit ? */
+			outab(0x81);
+			mod1 =  0xC0 | (opcode & 0x38) | (a1.a_type & TMREG);
+			outmod(mod1, &a1);
+			outraw(&a2);
+			break;
+		}
+		if (ta1 == TBR && a2.a_type == (TUSER|TIMMED)) {
+			/* FIXME: S bit ? */
+			outab(0x80);
+			mod1 =  0xC0 | (opcode & 0x38) | (a1.a_type & TMREG);
+			outmod(mod1, &a1);
+			outrab(&a2);
+			break;
+		}
+		/* mem, immed */
+		if (a2.a_type == (TIMMED|TUSER) && (a1.a_type & TMADDR) == TMODRM) {
+			/* TODO: sizing, S bit */
+			outab(0x80);
+			mod1 |= opcode & 0x38;
+			outmod(mod1, &a1);
+			outrab(&a2);
+			break;
+		}
+		if (ta1 == TWR && (a2.a_type & TMADDR) == TMODRM) {
+			outab(opcode | 1);
+			mod2 |= (a1.a_type & TMREG) << 3;
+			outmod(mod2, &a2);
+			break;
+		}
+		if (ta2 == TWR && (a1.a_type & TMADDR) == TMODRM) {
+			outab(opcode | 3);
+			mod1 |= (a2.a_type & TMREG) << 3;
+			outmod(mod1, &a1);
+			break;
+		}
+		if (ta1 == TWR && ta2 == TWR) {
+			outab(opcode | 1);
+			mod2 = 0xC0 | (a1.a_type & TMREG) | ((a2.a_type & TMREG)<< 3);
+			outmod(mod2, &a2);
+			break;
+		}
+		if (ta1 == TBR && (a2.a_type & TMADDR) == TMODRM) {
+			outab(opcode | 2);
+			mod2 |= (a1.a_type & TMREG) << 3;
+			outmod(mod2, &a2);
+			break;
+		}
+		if (ta2 == TBR && (a1.a_type & TMADDR) == TMODRM) {
+			outab(opcode);
+			mod1 |= (a2.a_type & TMREG) << 3;
+			outmod(mod1, &a1);
+			break;
+		}
+		if (ta1 == TBR && ta2 == TBR) {
+			outab(opcode);
+			mod2 = 0xC0 | (a1.a_type & TMREG) | ((a2.a_type & TMREG)<< 3);
+			outmod(mod2, &a2);
+			break;
+		}
+		aerr(BADMODE);
 		break;
 	default:
 		aerr(SYNTAX_ERROR);

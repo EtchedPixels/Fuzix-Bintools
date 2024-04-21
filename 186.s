@@ -4,16 +4,57 @@
 	aad
 	aam
 	aas
-;	adc
-;	add
-;	and
+	adc ax,1
+	adc bx,4
+	adc ax,bx
+	adc ax,[fred]
+	adc [fred],ax
+	adc [fred],1
+	adc al,1
+	adc bl,4
+	adc al,bl
+	adc al,[fred]
+	adc [fred],al
+	add ax,1
+	add bx,4
+	add ax,bx
+	add ax,[fred]
+	add [fred],ax
+	add [fred],1
+	add al,1
+	add bl,4
+	add al,bl
+	add al,[fred]
+	add [fred],al
+	and ax,1
+	and bx,4
+	and ax,bx
+	and ax,[fred]
+	and [fred],ax
+	and [fred],1
+	and al,1
+	and bl,4
+	and al,bl
+	and al,[fred]
+	and [fred],al
 ;	call
+;	callf
 	cbw
 	clc
 	cld
 	cli
 	cmc
-;	cmp
+	cmp ax,1
+	cmp bx,4
+	cmp ax,bx
+	cmp ax,[fred]
+	cmp [fred],ax
+	cmp [fred],1
+	cmp al,1
+	cmp bl,4
+	cmp al,bl
+	cmp al,[fred]
+	cmp [fred],al
 ;	cmps
 	cmpsb
 	cmpsw
@@ -69,6 +110,7 @@ fred:
 	js fred
 	jz fred
 ;	jmp fred
+;	jmpf fred
 	lahf
 	lds [fred]
 	lea ax,[fred]
@@ -109,8 +151,8 @@ foo:
 	push dx
 	popf
 	pushf
-;	rcl
-;	rcr
+	rcl bx
+	rcr bl
 	rep nop
 	repe nop
 	repz nop
@@ -118,24 +160,44 @@ foo:
 	repnz lock nop
 	ret
 	retf
-;	rol
-;	ror
+	rol ax
+	ror dl
 	sahf
-;	sal
-;	sar
-;	sbb
+	sal cl
+	sar bx
+	sbb ax,1
+	sbb bx,4
+	sbb ax,bx
+	sbb ax,[fred]
+	sbb [fred],ax
+	sbb [fred],1
+	sbb al,1
+	sbb bl,4
+	sbb al,bl
+	sbb al,[fred]
+	sbb [fred],al
 ;	scas
 	scasb
 	scasw
-;	shl
-;	shr
+	shl cx
+	shr cl
 	stc
 	std
 	sti
 ;	stos
 	stosb
 	stosw
-;	sub
+	sub ax,1
+	sub bx,4
+	sub ax,bx
+	sub ax,[fred]
+	sub [fred],ax
+	sub [fred],1
+	sub al,1
+	sub bl,4
+	sub al,bl
+	sub al,[fred]
+	sub [fred],al
 ;	test
 	wait
 	xchg ax,bx
@@ -143,7 +205,17 @@ foo:
 	xchg ax,[_fred]
 	xchg [_fred],ax
 	xlat
-;	xor
+	xor ax,1
+	xor bx,4
+	xor ax,bx
+	xor ax,[fred]
+	xor [fred],ax
+	xor [fred],1
+	xor al,1
+	xor bl,4
+	xor al,bl
+	xor al,[fred]
+	xor [fred],al
 
 	.186
 
