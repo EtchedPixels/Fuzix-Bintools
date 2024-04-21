@@ -16,11 +16,11 @@ test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       asnova ldnova nmnova osizenova dumprelocsnova \
       aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 \
       assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
+      asgb ldgb nmgb osizegb dumprelocsgb \
+      as8086 ld8086 nm8086 osize8086 dumprelocs8086
 
 todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
       aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 \
-      as8086 ld8086 nm8086 osize8086 dumprelocs8086
-      
 
 CCROOT ?=/opt/fcc/
 
@@ -272,6 +272,21 @@ osizesuper8: $(HDR) osize.c
 dumprelocssuper8: $(HDR) dumprelocs.o
 	cc -o dumprelocssuper8 dumprelocs.o
 
+asgb: $(HDR) $(CORE) as1-gb.c as6-gb.c
+	cc  -DTARGET_GB -o asgb $(CORE) as1-gb.c as6-gb.c
+
+ldgb: $(HDR) ld.c
+	cc -o ldgb ld.c
+
+nmgb: $(HDR) nm.c
+	cc -o nmgb nm.c
+
+osizegb: $(HDR) osize.c
+	cc -o osizegb osize.c
+
+dumprelocsgb: $(HDR) dumprelocs.o
+	cc -o dumprelocsgb dumprelocs.o
+
 asz80: $(HDR) $(CORE) as1-z80.c as6-z80.c
 	cc  -DTARGET_Z80 -o asz80 $(CORE) as1-z80.c as6-z80.c
 
@@ -300,6 +315,7 @@ clean:
 	rm -f as8086 ld8086 nm8086 osize8086 dumprelocs8086
 	rm -f as9900 ld9900 nm9900 osize9900 dumprelocs9900
 	rm -f asee200 ldee200 nmee200 osizeee200 dumprelocsee200
+	rm -f asgb ldgb nmgb osizegb dumprelocsgb
 	rm -f ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11
 	rm -f asnova ldnova nmnova osizenova dumprelocsnova
 	rm -f aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
@@ -330,10 +346,10 @@ installtest: test
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
 	cp as8086 ld8086 nm8086 osize8086 dumprelocs8086 $(CCROOT)/bin
+	cp asgb ldgb nmgb osizegb dumprelocsgb $(CCROOT)/bin
 	cp ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 $(CCROOT)/bin
 	cp asnova ldnova nmnova osizenova dumprelocsnova $(CCROOT)/bin
 	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
 	cp assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 $(CCROOT)/bin
 
-#	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
 #	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin
