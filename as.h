@@ -172,6 +172,123 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TOO_MANY_JR	31
 #define REQUIRE_Z80N	32
 
+#elif defined(TARGET_GB)
+
+/* We generate intentionally wrapping 16bit maths for relocations */
+#define TARGET_RELOC_OVERFLOW_OK
+
+typedef	uint16_t	VALUE;		/* For symbol values */
+
+#define ARCH OA_GB
+#define ARCH_FLAGS 0
+#define ARCH_CPUFLAGS 0
+
+/*
+ * Types. These are used
+ * in both symbols and in address
+ * descriptions. Observe the way the
+ * symbol flags hide in the register
+ * field of the address.
+ */
+#define	TMREG	0x007F			/* Register code */
+#define	TMMDF	0x0001			/* Multidef */
+#define	TMASG	0x0002			/* Defined by "=" */
+#define	TMMODE	0xFF00			/* Mode */
+#define	TMINDIR	0x8000			/* Indirect flag in mode */
+#define TPUBLIC	0x0080			/* Exported symbol */
+
+#define	TNEW	0x0000			/* Virgin */
+#define	TUSER	0x0100			/* User name */
+#define	TBR	0x0200			/* Byte register */
+#define	TWR	0x0300			/* Word register */
+#define	TSR	0x0400			/* Special register (I, R) */
+#define	TDEFB	0x0500			/* defb */
+#define	TDEFW	0x0600			/* defw */
+#define	TDEFS	0x0700			/* defs */
+#define	TDEFM	0x0800			/* defm */
+#define	TORG	0x0900			/* org */
+#define	TEQU	0x0A00			/* equ */
+#define	TCOND	0x0B00			/* conditional */
+#define	TENDC	0x0C00			/* end conditional */
+#define TSEGMENT 0x0D00			/* segments by number */
+#define TEXPORT 0x0E00			/* symbol export */
+#define	TNOP	0x0F00			/* nop */
+#define	TRST	0x1000			/* restarts */
+#define	TREL	0x1100			/* djnz, jr */
+#define	TRET	0x1200			/* ret */
+#define	TJMP	0x1300			/* call, jp */
+#define	TPUSH	0x1400			/* push, pop */
+#define	TIM	0x1500			/* im */
+#define	TIO	0x1600			/* in, out */
+#define	TBIT	0x1700			/* set, res, bit */
+#define	TSHR	0x1800			/* sl, sr et al */
+#define	TINC	0x1900			/* inc, dec */
+#define	TEX	0x1A00			/* ex */
+#define	TADD	0x1B00			/* add, adc, sbc */
+#define	TLD	0x1C00			/* ld */
+#define	TCC	0x1D00			/* condition code */
+#define	TSUB	0x1E00			/* sub et al */
+#define TSTOP	0x1F00			/* stop $n */
+#define TLDDI	0x2000			/* ldd/ldh a,(hl) (hl),a */
+#define TLDH	0x2100			/* ldh (I/O) */
+
+/*
+ * Registers.
+ */
+#define	B	0
+#define	C	1
+#define	D	2
+#define	E	3
+#define	H	4
+#define	L	5
+#define	M	6
+#define	A	7
+
+#define	BC	0
+#define	DE	1
+#define	HL	2
+#define	SP	3
+#define	AF	4
+
+/*
+ * Condition codes.
+ */
+#define	CNZ	0
+#define	CZ	1
+#define	CNC	2
+#define	CC	3
+
+/*
+ *	Error message numbers
+ */
+
+#define BRACKET_EXPECTED 1
+#define MISSING_COMMA	2
+#define SQUARE_EXPECTED 3
+#define PERCENT_EXPECTED 4
+#define UNEXPECTED_CHR	10
+#define PHASE_ERROR	11
+#define MULTIPLE_DEFS	12
+#define SYNTAX_ERROR	13
+#define MUST_BE_ABSOLUTE	14
+#define MISSING_DELIMITER 15
+#define INVALID_CONST	16
+#define BRA_RANGE	17
+#define CONDCODE_ONLY	18
+#define INVALID_REG	19
+#define ADDR_REQUIRED	20
+#define INVALID_ID	21
+#define REG_MUST_BE_C	22
+#define DIVIDE_BY_ZERO	23
+#define CONSTANT_RANGE  24
+#define DATA_IN_BSS	 25
+#define SEGMENT_OVERFLOW 26
+#define DATA_IN_ZP	27
+#define REQUIRE_Z180	28
+#define	SEGMENT_CLASH	29
+#define UNKNOWN_SYMBOL	30
+#define TOO_MANY_JR	31
+
 #elif TARGET_8080
 
 typedef	uint16_t	VALUE;		/* For symbol values */

@@ -34,6 +34,7 @@ struct objhdr
 #define OA_6809		13
 #define OA_PE16		14	/* Interdata/Perkin Elmer 16bit */
 #define OA_8086		15
+#define OA_GB		16	/* Gameboy */
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */
