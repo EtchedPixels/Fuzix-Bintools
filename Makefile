@@ -1,6 +1,7 @@
 all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      as6502 ld6502 nm6502 osize6502 dumprelocs6502 \
      as6800 ld6800 nm6800 osize6800 dumprelocs6800 \
+     as6805 ld6805 nm6805 osize6805 dumprelocs6805 \
      as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
      as8008 ld8008 nm8008 osize8008 dumprelocs8008 \
      as8080 ld8080 nm8080 osize8080 dumprelocs8080 \
@@ -76,6 +77,21 @@ osize6800: $(HDR) osize.c
 
 dumprelocs6800: $(HDR) dumprelocs.o
 	cc -o dumprelocs6800 dumprelocs.o
+
+as6805: $(HDR) $(CORE) as1-6805.c as6-6805.c
+	cc  -DTARGET_6805 -o as6805 $(CORE) as1-6805.c as6-6805.c
+
+ld6805: $(HDR) ld.c
+	cc -o ld6805 ld.c
+
+nm6805: $(HDR) nm.c
+	cc -o nm6805 nm.c
+
+osize6805: $(HDR) osize.c
+	cc -o osize6805 osize.c
+
+dumprelocs6805: $(HDR) dumprelocs.o
+	cc -o dumprelocs6805 dumprelocs.o
 
 as6809: $(HDR) $(CORE) as1-6809.c as6-6809.c
 	cc  -DTARGET_6809 -o as6809 $(CORE) as1-6809.c as6-6809.c
@@ -307,6 +323,7 @@ clean:
 	rm -f as1802 ld1802 nm1802 osize1802 dumprelocs1802
 	rm -f as6502 ld6502 nm6502 osize6502 dumprelocs6502
 	rm -f as6800 ld6800 nm6800 osize6800 dumprelocs6800
+	rm -f as6805 ld6805 nm6805 osize6805 dumprelocs6805
 	rm -f as6809 ld6809 nm6809 osize6809 dumprelocs6809
 	rm -f as8008 ld8008 nm8008 osize8008 dumprelocs8008
 	rm -f as8060 ld8060 nm8060 osize8060 dumprelocs8060
@@ -332,6 +349,7 @@ install: all
 	cp as1802 ld1802 nm1802 osize1802 dumprelocs1802 $(CCROOT)/bin
 	cp as6502 ld6502 nm6502 osize6502 dumprelocs6502 $(CCROOT)/bin
 	cp as6800 ld6800 nm6800 osize6800 dumprelocs6800 $(CCROOT)/bin
+	cp as6805 ld6805 nm6805 osize6805 dumprelocs6805 $(CCROOT)/bin
 	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
 	cp as8008 ld8008 nm8008 osize8008 dumprelocs8008 $(CCROOT)/bin
 	cp as8080 ld8080 nm8080 osize8080 dumprelocs8080 $(CCROOT)/bin
