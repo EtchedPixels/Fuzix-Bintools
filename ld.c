@@ -287,6 +287,19 @@ static uint16_t xstrtoul(const char *p)
 }
 
 /*
+ *	Target specific behaviour
+ */
+
+static unsigned target_has_regzp(void)
+{
+	/* Processors which have has ZP as register space don't write out
+	   the ZP segment as it's not part of the actual real memory map */
+	if (arch == OA_Z8)
+		return 1;
+	return 0;
+}
+
+/*
  *	Manage the linked list of object files and object modules within
  *	libraries that we have seen.
  */
@@ -1204,6 +1217,10 @@ static void write_binary(FILE * op, FILE *mp)
 	/* Absolute images may contain things other than code/data/bss */
 	if (ldmode == LD_ABSOLUTE) {
 		for (i = 4; i < OSEG; i++) {
+			if (target_has_regzp()) {
+				if (i == ZP)
+					continue;
+			}
 			write_stream(op, i);
 		}
 	}
