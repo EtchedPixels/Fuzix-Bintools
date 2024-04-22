@@ -74,7 +74,7 @@ static void require_z180(void)
 {
 	if (!(cpu_flags & OA_8080_Z180)) {
 		if (pass == 3)
-		cpu_flags |= OA_8080_Z180;
+			cpu_flags |= OA_8080_Z180;
 		if (cputype != CPU_Z180)
 			err('1',REQUIRE_Z180);
 	}
