@@ -7,21 +7,21 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      as8080 ld8080 nm8080 osize8080 dumprelocs8080 \
      as9900 ld9900 nm9900 osize9900 dumprelocs9900 \
      asee200 ldee200 nmee200 osizeee200 dumprelocsee200 \
+     asgb ldgb nmgb osizegb dumprelocsgb \
+     assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
      asz8 ldz8 nmz8 osizez8 dumprelocsz8 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
      reloc
 
 test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
+      as8086 ld8086 nm8086 osize8086 dumprelocs8086 \
       ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 \
       asnova ldnova nmnova osizenova dumprelocsnova \
-      aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 \
-      assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
-      asgb ldgb nmgb osizegb dumprelocsgb \
-      as8086 ld8086 nm8086 osize8086 dumprelocs8086
+      aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16
 
 todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
-      aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 \
+      aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
 
 CCROOT ?=/opt/fcc/
 
