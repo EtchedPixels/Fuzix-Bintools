@@ -471,7 +471,7 @@ unsigned range_8bit(ADDR *ap)
 
 /* 6809 people expect the assembler to deal with both relative and
    symbolic representations for pc relative. So it's valid to do
-   write 12,pcr  meanign pc + 12,  offset .equ 12 offset,pcr meaning
+   write 12,pcr  meaning pc + 12,  offset .equ 12 offset,pcr meaning
    pc + 12 but also if fred is a symbol in the code etc that
    fred,pcr means a reference to fred not fred + pc */
 void write_rel16(ADDR *ap)
@@ -481,13 +481,16 @@ void write_rel16(ADDR *ap)
 		outraw(ap);
 		return;
 	}
+	/* We need to do some work on the linker to add the case of "PC relative
+	   but offset is known value relative to another segment FIXME */
+	if (ap->a_segment != segment)
+		aerr(SEGMENT_CLASH);
+
 	/* In a segment or unknown so assume it's a real address and
-	   write a 16bit relative address. This will probably need fixes
-	   to as4 and the linker as we've never had any pc relative word
-	   stuff before */
+	   write a 16bit relative address. */
 	if (ap->a_segment != UNKNOWN)
 		/* Adjust if we know the true value but for a PC rel symbol
-		   relocaiton we don't. Wants pushing down into rawrel somehow */
+		   relocation we don't. Wants pushing down into rawrel somehow */
 		ap->a_value -= dot[segment];
 	/* The PC relative applies versus the byte *after* the two we are about to reloc */
 	ap->a_value -= 2;
