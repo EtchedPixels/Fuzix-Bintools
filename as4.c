@@ -356,11 +356,11 @@ void outrawrel(ADDR *a)
 		return;
 	}
 #ifdef TARGET_BIGENDIAN
-	outabyte(a->a_value >> 8);
-	outabyte(a->a_value);
+	outab(a->a_value >> 8);
+	outab(a->a_value);
 #else
-	outabyte(a->a_value);
-	outabyte(a->a_value >> 8);
+	outab(a->a_value);
+	outab(a->a_value >> 8);
 #endif
 }
 

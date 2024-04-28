@@ -44,7 +44,6 @@ static unsigned int getnextrel(void)
 static int segment_incompatible(ADDR *ap)
 {
 	/* No idea for sizing externals */
-	printf(";sym seg %d ptr %p\n", ap->a_segment, ap->a_sym);
 	if (ap->a_segment == UNKNOWN)
 		return 1;
 	if (ap->a_segment == segment)
@@ -831,8 +830,6 @@ loop:
 			if (pass == 2)
 				setnextrel(c);
 		}
-		if (pass > 0)
-			printf("fit %d = %u\n", pass, c);
 		if (c) {	/* LBxx is 0x10, Bxx, ... */
 			if (opcode == 0x8D)	/* BSR -> LBSR */
 				outab(0x17);
