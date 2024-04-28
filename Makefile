@@ -11,7 +11,7 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
      asz8 ldz8 nmz8 osizez8 dumprelocsz8 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
-     reloc
+     reloc template
 
 test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
@@ -31,7 +31,10 @@ CORE = as0.c as2.c as3.c as4.c
 CFLAGS += -Wall -pedantic
 
 reloc: $(HDR) reloc.c
-	cc reloc.c -o reloc
+	cc $(CFLAGS) reloc.c -o reloc
+
+template: template.c
+	cc $(CFLAGS) template.c -o template
 
 as1802: $(HDR) $(CORE) as1-1802.c as6-1802.c
 	cc  -DTARGET_1802 -o as1802 $(CORE) as1-1802.c as6-1802.c
@@ -358,6 +361,7 @@ install: all
 	cp asz8 ldz8 nmz8 osizez8 dumprelocsz8 $(CCROOT)/bin
 	cp asz80 ldz80 nmz80 osizez80 dumprelocsz80 $(CCROOT)/bin
 	cp reloc $(CCROOT)/bin/relocz80
+	cp template $(CCROOT)/bin/template
 
 installtest: test
 	mkdir -p /opt/fcc/bin
