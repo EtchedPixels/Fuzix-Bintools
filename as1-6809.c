@@ -43,6 +43,10 @@ static unsigned int getnextrel(void)
    branches from the overlapping 'absolute' space */
 static int segment_incompatible(ADDR *ap)
 {
+	/* No idea for sizing externals */
+	printf(";sym seg %d ptr %p\n", ap->a_segment, ap->a_sym);
+	if (ap->a_segment == UNKNOWN)
+		return 1;
 	if (ap->a_segment == segment)
 		return 0;
 	if (ap->a_segment == ZP && segment == 0 && ap->a_value < 256)
@@ -482,7 +486,11 @@ void write_rel16(ADDR *ap)
 	   write a 16bit relative address. This will probably need fixes
 	   to as4 and the linker as we've never had any pc relative word
 	   stuff before */
-	ap->a_value -= dot[segment];
+	if (ap->a_segment != UNKNOWN)
+		/* Adjust if we know the true value but for a PC rel symbol
+		   relocaiton we don't. Wants pushing down into rawrel somehow */
+		ap->a_value -= dot[segment];
+	/* The PC relative applies versus the byte *after* the two we are about to reloc */
 	ap->a_value -= 2;
 	outrawrel(ap);
 }
@@ -823,6 +831,8 @@ loop:
 			if (pass == 2)
 				setnextrel(c);
 		}
+		if (pass > 0)
+			printf("fit %d = %u\n", pass, c);
 		if (c) {	/* LBxx is 0x10, Bxx, ... */
 			if (opcode == 0x8D)	/* BSR -> LBSR */
 				outab(0x17);
@@ -842,7 +852,7 @@ loop:
 		break;
 	case TLBRA:
 		getaddr(&a1);
-		if (a1.a_segment != segment)
+		if (a1.a_segment != segment && a1.a_segment != UNKNOWN)
 			aerr(BRA_RANGE);
 		if (opcode >> 8)
 			outab(opcode >> 8);

@@ -144,6 +144,9 @@ static void outreloc(ADDR *a, int bytes)
 #ifdef TARGET_RELOC_OVERFLOW_OK
 		outbyte(REL_OVERFLOW);
 #endif
+		/* TODO: Better error ? */
+		if (bytes != 1 && (a->a_flags & (A_LOW|A_HIGH)))
+			qerr(CONSTANT_RANGE);
 		/* low bits of 16 bit is an 8bit relocation with
 		   overflow suppressed */
 		if (a->a_flags & A_LOW) {
@@ -322,6 +325,7 @@ void outrabrel(ADDR *a)
 		outbyte((0 << 4 ) | REL_PCREL);
 		outbyte(a->a_sym->s_number & 0xFF);
 		outbyte(a->a_sym->s_number >> 8);
+		/* TODO: look into ordering here */
 		outabyte(a->a_value);
 		outbyte(a->a_value >> 8);
 		return;
@@ -339,11 +343,16 @@ void outrawrel(ADDR *a)
 	check_store_allowed(segment, 1);
 	if (a->a_sym) {
 		outbyte(REL_ESC);
-		outbyte((0 << 4 ) | REL_PCREL);
+		outbyte((1 << 4 ) | REL_PCREL);
 		outbyte(a->a_sym->s_number & 0xFF);
 		outbyte(a->a_sym->s_number >> 8);
+#ifdef TARGET_BIGENDIAN
+		outabyte(a->a_value >> 8);
 		outabyte(a->a_value);
-		outbyte(a->a_value >> 8);
+#else
+		outabyte(a->a_value);
+		outabyte(a->a_value >> 8);
+#endif
 		return;
 	}
 #ifdef TARGET_BIGENDIAN
