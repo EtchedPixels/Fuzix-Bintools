@@ -354,14 +354,18 @@ void outrawrel(ADDR *a)
 		outabyte(a->a_value >> 8);
 #endif
 		return;
-	}
+	} else {
+		outbyte(REL_ESC);
+		outbyte(REL_PCR);
+		outbyte((1 << 4) | REL_SIMPLE | a->a_segment);
 #ifdef TARGET_BIGENDIAN
-	outab(a->a_value >> 8);
-	outab(a->a_value);
+		outab(a->a_value >> 8);
+		outab(a->a_value);
 #else
-	outab(a->a_value);
-	outab(a->a_value >> 8);
+		outab(a->a_value);
+		outab(a->a_value >> 8);
 #endif
+	}
 }
 
 static void putsymbol(SYM *s, FILE *ofp)

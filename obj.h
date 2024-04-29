@@ -132,10 +132,17 @@ struct objhdr
    7: scale direction
    6: error if cannot resolve
    2-0: scale (1,2,4,8)
+
+   (proposed - see doc)
  */
 #define RELMOD_RELH	0x80
 #define RELMOD_RELERR	0x40
 #define RELMOD_RELBITS	0x3F
+
+/* Blocks - reserved */
+#define REL_BLOCK	(REL_SPECIAL | (6 << 4)) /* 60 */
+/* Following simple relocation is ,PCR style (PC relative across segments) */
+#define REL_PCR		(REL_SPECIAL | (7 << 4)) /* 70 */
 
 /* symbols and debug are in the format 
     uint8_t flags

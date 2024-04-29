@@ -249,6 +249,10 @@ static int dump_data(const char *p, int seg, int fd)
             continue;
         }
         high = 0;
+        if (c == REL_PCR) {
+            reloc_tag("P");
+            c = nextbyte(fd);
+        }
         if (c == REL_OVERFLOW) {
             reloc_tag("O");
             c = nextbyte(fd);

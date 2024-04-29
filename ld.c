@@ -940,6 +940,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 		uint8_t optype;
 		uint8_t overflow = 1;
 		uint8_t high = 0;
+		uint8_t pcrel = 0;
 
 //		if (ldmode == LD_ABSOLUTE && ftell(op) != dot) {
 //			fprintf(stderr, "%ld not %d\n",
@@ -987,6 +988,10 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				xfseek(op, dot);
 			continue;
 		}
+		if (code == REL_PCR) {
+			pcrel = 1;
+			io_readb(&code);
+		}
 		if (code == REL_OVERFLOW) {
 			overflow = 0;
 			io_readb(&code);
@@ -1011,34 +1016,52 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 			/* If we are not building an absolute then keep the tag */
 			if (!rawstream) {
 				fputc(REL_ESC, op);
+				if (pcrel)
+					fputc(REL_PCREL, op);
 				if (!overflow)
 					fputc(REL_OVERFLOW, op);
 				if (high)
 					fputc(REL_HIGH, op);
 				fputc(code, op);
 			}
-			/* Relocate the value versus the new segment base and offset of the
-			   object */
-			r = target_get(o, size);
-//			fprintf(stderr, "Target is %x, Segment %d base is %x\n", 
-//				r, seg, o->base[seg]);
-			r += o->base[seg];
-			if (overflow && (r < o->base[seg] || (size == 1 && r > 255))) {
-				fprintf(stderr, "%d width relocation offset %d does not fit.\n", size, r);
-				fprintf(stderr, "relocation failed at 0x%04X\n", dot);
-				warning("relocation exceeded");
+			if (pcrel) {
+				r = target_get(o, size);
+				r += o->base[seg];
+				/* r is now the abs address */
+				r -= dot;
+				/* r is now relative to the address of the relocation */
+				if (high && rawstream) {
+					r >>= 8;
+					size = 1;
+				}
+				target_put(o, r, size, op);
+				dot += size;
+				/* No need to record this for reloc as it's relative */
+				continue;
+			} else {
+				/* Relocate the value versus the new segment base and offset of the
+				   object */
+				r = target_get(o, size);
+				//			fprintf(stderr, "Target is %x, Segment %d base is %x\n", 
+				//				r, seg, o->base[seg]);
+				r += o->base[seg];
+				if (overflow && (r < o->base[seg] || (size == 1 && r > 255))) {
+					fprintf(stderr, "%d width relocation offset %d does not	fit.\n", size, r);
+					fprintf(stderr, "relocation failed at 0x%04X\n", dot);
+					warning("relocation exceeded");
+				}
+				/* A high relocation had a 16bit input value we relocate versus
+				   the base then chop down */
+				if (high && rawstream) {
+					r >>= 8;
+					size = 1;
+				}
+				target_put(o, r, size, op);
+				if (ldmode == LD_FUZIX)
+					record_reloc(o, high, size, seg, dot);
+				dot += size;
+				continue;
 			}
-			/* A high relocation had a 16bit input value we relocate versus
-			   the base then chop down */
-			if (high && rawstream) {
-				r >>= 8;
-				size = 1;
-			}
-			target_put(o, r, size, op);
-			if (ldmode == LD_FUZIX)
-				record_reloc(o, high, size, seg, dot);
-			dot += size;
-			continue;
 		}
 		optype = code & REL_TYPE;
 		/* Symbolic relocations - may be inter-segment and inter-object */

@@ -481,17 +481,6 @@ void write_rel16(ADDR *ap)
 		outraw(ap);
 		return;
 	}
-	/* We need to do some work on the linker to add the case of "PC relative
-	   but offset is known value relative to another segment FIXME */
-	if (ap->a_segment != UNKNOWN && ap->a_segment != segment)
-		aerr(SEGMENT_CLASH);
-
-	/* In a segment or unknown so assume it's a real address and
-	   write a 16bit relative address. */
-	if (ap->a_segment != UNKNOWN)
-		/* Adjust if we know the true value but for a PC rel symbol
-		   relocation we don't. Wants pushing down into rawrel somehow */
-		ap->a_value -= dot[segment];
 	/* The PC relative applies versus the byte *after* the two we are about to reloc */
 	ap->a_value -= 2;
 	outrawrel(ap);
