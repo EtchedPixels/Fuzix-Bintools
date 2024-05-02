@@ -132,7 +132,7 @@ SYM	sym[] = {
 	{	0,	"psha",		TIMPL,		0x36	},
 	{	0,	"pshb",		TIMPL,		0x37	},
 	{	0,	"pulx",		TIMPL,		0x38	},
-	{	0,	"pulx",		TIMPL,		0x1838	},
+	{	0,	"puly",		TIMPL,		0x1838	},
 	{	0,	"rts",		TIMPL,		0x39	},
 	{	0,	"abx",		TIMPL,		0x3A	},
 	{	0,	"aby",		TIMPL,		0x183A	},
@@ -238,6 +238,7 @@ SYM	sym[] = {
 	{	0,	"stop",		TIMPL,		0xCF	},
 	{	0,	"ldy",		T16DIXE,	0x18CE	},
 	{	0,	"stx",		T16DXE,		0xCF	},
+	{	0,	"sty",		T16DXE,		0x18CF	},
 	{	0,	"jsr",		T16DXE,		0x8D	},
 };
 

@@ -429,12 +429,15 @@ loop:
 	/* Special case STX ind,Y is CD EF */
 	/* Special case CPD is 1A prefix and CDA3  for IND,Y */
 	/* FIXME: CPX IND,Y  CDCA */
+	case T16DIXE3:
 	case T16DIXE:
 	case T16DXE:
 		getaddr(&a1);
 		switch(a1.a_type & TMADDR) {
 		case TIMMED:
 			if ((sp->s_type&TMMODE) == T16DXE)
+				aerr(ADDR_REQUIRED);
+			if ((sp->s_type&TMMODE) == T16DXE3)
 				aerr(ADDR_REQUIRED);
 			if (opcode >> 8)
 				outab(opcode >> 8);
@@ -468,6 +471,7 @@ loop:
 				outab(0x18);
 			outab(opcode + 0x20);
 			outab(a1.a_value);
+			break;
 		default:
 			/* An address */
 			if (opcode >> 8)
