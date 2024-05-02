@@ -165,6 +165,9 @@ static void outreloc(ADDR *a, int bytes)
 		if (a->a_sym == NULL) {
 			/* low bits of 16 bit is an 8bit relocation with
 			   overflow suppressed */
+			/* Trap bogus relocation records */
+			if (a->a_segment == 15)
+				aerr(PHASE_ERROR);
 			outbyte(s | REL_SIMPLE | a->a_segment);
 		} else {
 			outbyte(s | REL_SYMBOL);
