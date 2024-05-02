@@ -342,12 +342,18 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 
 	/* A, B, D, forms are awkward as we now have two registers. Fudge
 	   it to fit the standard formats */
-	if (ap->a_type & (TMADDR|TMREG) == (TBR|A))
+	if (ap->a_type == (TBR|A))
 		type = TINDEXA;
-	else if (ap->a_type & (TMADDR|TMREG) == (TBR|A))
+	else if (ap->a_type == (TBR|B))
 		type = TINDEXB;
-	else if (ap->a_type & (TMADDR|TMREG) == (TBR|A))
+	else if (ap->a_type == (TWR|D))
 		type = TINDEXD;
+	else if ((ap->a_type & TMMODE) == TBR ||
+		 (ap->a_type & TMMODE) == TWR) {
+			 aerr(INVALID_FORM);
+			 type = TINDEXD;
+			 /* Dummy type to avoid cascading errors */
+	}
 
 	/* We can't just throw the right hand side at the expression
 	   parser because it's full of + and - but not an expression so
@@ -386,6 +392,14 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 			qerr(INVALID_FORM);
 	} else
 		index_required(ap);
+
+	/* A B and D, forms do not allow pre/post */
+	if (type == TINDEXA || type == TINDEXB || type == TINDEXD) {
+		if (predec || postinc)
+			qerr(INVALID_FORM);
+		ap->a_value = 0;
+	}
+
 	/* Now put together the address descriptor */
 	/* Set up the TMADDR bits */
 	if (indirect)
