@@ -13,7 +13,8 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
      reloc template
 
-test: as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
+test: as316 ld316 nm316 osize316 dumprelocs316 \
+      as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
       as8086 ld8086 nm8086 osize8086 dumprelocs8086 \
       ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 \
@@ -50,6 +51,21 @@ osize1802: $(HDR) osize.c
 
 dumprelocs1802: $(HDR) dumprelocs.o
 	cc -o dumprelocs1802 dumprelocs.o
+
+as316: $(HDR) $(CORE) as1-316.c as6-316.c
+	cc  -DTARGET_316 -o as316 $(CORE) as1-316.c as6-316.c
+
+ld316: $(HDR) ld.c
+	cc -o ld316 ld.c
+
+nm316: $(HDR) nm.c
+	cc -o nm316 nm.c
+
+osize316: $(HDR) osize.c
+	cc -o osize316 osize.c
+
+dumprelocs316: $(HDR) dumprelocs.o
+	cc -o dumprelocs316 dumprelocs.o
 
 as6502: $(HDR) $(CORE) as1-6502.c as6-6502.c
 	cc  -DTARGET_6502 -o as6502 $(CORE) as1-6502.c as6-6502.c
@@ -324,6 +340,7 @@ dumprelocsz80: $(HDR) dumprelocs.o
 clean:
 	rm -f *.o *~
 	rm -f as1802 ld1802 nm1802 osize1802 dumprelocs1802
+	rm -f as316 ld316 nm316 osize316 dumprelocs316
 	rm -f as6502 ld6502 nm6502 osize6502 dumprelocs6502
 	rm -f as6800 ld6800 nm6800 osize6800 dumprelocs6800
 	rm -f as6805 ld6805 nm6805 osize6805 dumprelocs6805
@@ -367,6 +384,7 @@ install: all
 
 installtest: test
 	mkdir -p /opt/fcc/bin
+	cp as316 ld316 nm316 osize316 dumprelocs316 $(CCROOT)/bin
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
 	cp as8086 ld8086 nm8086 osize8086 dumprelocs8086 $(CCROOT)/bin

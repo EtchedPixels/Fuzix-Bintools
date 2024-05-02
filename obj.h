@@ -36,6 +36,7 @@ struct objhdr
 #define OA_8086		15
 #define OA_GB		16	/* Gameboy */
 #define	OA_6805		17	/* 6805/05/HC08 - 6808 is unrelated */
+#define OA_H316		18	/* System 16 */
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */
@@ -80,6 +81,9 @@ struct objhdr
 #define OA_8086_286	2
 
 #define OA_6805_HC08	1
+
+#define OA_H316_516	1
+#define OA_H316_HSA	2
 
     uint16_t o_unused;		/* So it packs right */
     uint32_t o_segbase[OSEG];
@@ -143,6 +147,8 @@ struct objhdr
 #define REL_BLOCK	(REL_SPECIAL | (6 << 4)) /* 60 */
 /* Following simple relocation is ,PCR style (PC relative across segments) */
 #define REL_PCR		(REL_SPECIAL | (7 << 4)) /* 70 */
+/* Target specific */
+#define REL_TARGET	(REL_SPECIAL | (0xE << 4))	/* E0 */
 
 /* symbols and debug are in the format 
     uint8_t flags
