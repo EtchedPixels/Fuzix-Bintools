@@ -8,6 +8,7 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      as9900 ld9900 nm9900 osize9900 dumprelocs9900 \
      asee200 ldee200 nmee200 osizeee200 dumprelocsee200 \
      asgb ldgb nmgb osizegb dumprelocsgb \
+      ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 \
      assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
      asz8 ldz8 nmz8 osizez8 dumprelocsz8 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
@@ -17,7 +18,6 @@ test: as316 ld316 nm316 osize316 dumprelocs316 \
       as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
       as8086 ld8086 nm8086 osize8086 dumprelocs8086 \
-      ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 \
       asnova ldnova nmnova osizenova dumprelocsnova \
       aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16
 
@@ -373,6 +373,7 @@ install: all
 	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
 	cp as8008 ld8008 nm8008 osize8008 dumprelocs8008 $(CCROOT)/bin
 	cp as8080 ld8080 nm8080 osize8080 dumprelocs8080 $(CCROOT)/bin
+	cp ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 $(CCROOT)/bin
 	cp as9900 ld9900 nm9900 osize9900 dumprelocs9900 $(CCROOT)/bin
 	cp asee200 ldee200 nmee200 osizeee200 dumprelocsee200 $(CCROOT)/bin
 	cp asz8 ldz8 nmz8 osizez8 dumprelocsz8 $(CCROOT)/bin
@@ -388,7 +389,6 @@ installtest: test
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
 	cp as8086 ld8086 nm8086 osize8086 dumprelocs8086 $(CCROOT)/bin
-	cp ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 $(CCROOT)/bin
 	cp asnova ldnova nmnova osizenova dumprelocsnova $(CCROOT)/bin
 	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
 #	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin
