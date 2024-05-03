@@ -836,6 +836,111 @@ loop:
 		}
 		aerr(BADMODE);
 		break;
+	case TMOV:
+		/* Mov is a world of its own */
+		getaddr_mem(&a1, &mod1);
+		comma();
+		getaddr_mem(&a2, &mod2);
+		ta1 = a1.a_type & TMMODE;
+		ta2 = a2.a_type & TMMODE;
+//		outsegment();
+		/* mov is really two instructions mov and segment mov */
+		if (ta1 == TSR && ta2 == TSR) {
+			aerr(BADMODE);
+			break;
+		}
+		/* Segment registers. Only MODRM form no immediates */
+		if (ta1 == TSR) {
+			if (ta2 != TWR && (a2.a_type & TMADDR) != TMODRM) {
+				aerr(BADMODE);
+				break;
+			}
+			outab(0x8C);
+			mod2 |= (a1.a_type & TMREG) << 3;
+			outmod(mod2, &a2);
+			break;
+		}
+		/* Segment registers. Only MODRM form no immediates */
+		if (ta2 == TSR) {
+			if (ta1 != TWR && (a1.a_type & TMADDR) != TMODRM) {
+				aerr(BADMODE);
+				break;
+			}
+			outab(0x8E);
+			mod1 |= (a2.a_type & TMREG) << 3;
+			outmod(mod1, &a1);
+			break;
+		}
+		/* Now into the mainstream forms */
+		/* Immediate loads */
+		if (ta1 == TWR && a2.a_type == (TIMMED|TUSER)) {
+			outab(0xB8 | (a1.a_type & TMREG));
+			outraw(&a2);
+			break;
+		}
+		if (ta1 == TBR && a2.a_type == (TIMMED|TUSER)) {
+			outab(0xB0 | (a1.a_type & TMREG));
+			outrab(&a2);
+			break;
+		}
+		/* TODO immediate load to memory ..sizing */
+		if ((a1.a_type & TMADDR) == TMODRM && a2.a_type == (TIMMED|TUSER)) {
+			outab(0xC6);	/* C7 for word */
+			outmod(mod1, &a1);
+			outraw(&a2);
+			break;
+		}
+		/* AX and AL short forms */
+		if (a1.a_type == (TWR|AX) && (a2.a_type & TMADDR) == TMODRM && mod2 == 0x06) {
+			outab(0xA3);
+			outraw(&a2);
+			break;
+		}
+		if (a1.a_type == (TBR|AL) && (a2.a_type & TMADDR) == TMODRM && mod2 == 0x06) {
+			outab(0xA2);
+			outraw(&a2);
+			break;
+		}
+		/* And the other direction short form */
+		if (a2.a_type == (TWR|AX) && (a1.a_type & TMADDR) == TMODRM && mod1 == 0x06) {
+			outab(0xA1);
+			outraw(&a1);
+			break;
+		}
+		if (a2.a_type == (TBR|AL) && (a1.a_type & TMADDR) == TMODRM && mod1 == 0x06) {
+			outab(0xA0);
+			outraw(&a1);
+			break;
+		}
+		/* Reg to/from memory/reg modrm forms */
+		if (ta1 == TWR && (a2.a_type & TMADDR) == TMODRM) {
+			outab(0x89);
+			mod2 |= (a1.a_type & TMREG) << 3;
+			outmod(mod2, &a2);
+			break;
+		}
+		if (ta1 == TBR && (a2.a_type & TMADDR) == TMODRM) {
+			outab(0x88);
+			mod2 |= (a1.a_type & TMREG) << 3;
+			outmod(mod2, &a2);
+			break;
+		}
+		if (ta2 == TWR && (a1.a_type & TMADDR) == TMODRM) {
+			outab(0x8B);
+			mod1 |= (a2.a_type & TMREG) << 3;
+			outmod(mod1, &a1);
+			break;
+		}
+		if (ta1 == TWR && (a2.a_type & TMADDR) == TMODRM) {
+			outab(0x8A);
+			mod1 |= (a1.a_type & TMREG) << 3;
+			outmod(mod1, &a1);
+			break;
+		}
+		qerr(BADMODE);
+		break;
+			
+		
 	default:
 		aerr(SYNTAX_ERROR);
 	}
