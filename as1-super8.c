@@ -234,6 +234,11 @@ int getcond(ADDR *ap)
 void getaddr(ADDR *ap)
 {
 	int c = getnb();
+
+	ap->a_type = 0;
+	ap->a_flags = 0;
+	ap->a_sym = NULL;
+
 	if (c == '<')
 		ap->a_flags |= A_LOW;
 	else if (c == '>')
