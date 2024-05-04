@@ -342,7 +342,7 @@ void outrabrel(ADDR *a)
 
 void outrawrel(ADDR *a)
 {
-	int16_t v = (int16_t)a->a_value;
+	uint16_t av = (int16_t)a->a_value;
 	check_store_allowed(segment, 1);
 	if (a->a_sym) {
 		outbyte(REL_ESC);
@@ -350,23 +350,33 @@ void outrawrel(ADDR *a)
 		outbyte(a->a_sym->s_number & 0xFF);
 		outbyte(a->a_sym->s_number >> 8);
 #ifdef TARGET_BIGENDIAN
-		outabyte(a->a_value >> 8);
-		outabyte(a->a_value);
+		outabyte(av >> 8);
+		outabyte(av);
 #else
-		outabyte(a->a_value);
-		outabyte(a->a_value >> 8);
+		outabyte(av);
+		outabyte(av >> 8);
 #endif
 		return;
+	} else if (0 && segment == a->a_segment) {
+		/* We don't need to issue a relocation if it's within
+		   segment */
+#ifdef TARGET_BIGENDIAN
+		outab(av >> 8);
+		outab(av);
+#else
+		outab(av);
+		outab(av >> 8);
+#endif
 	} else {
 		outbyte(REL_ESC);
 		outbyte(REL_PCR);
 		outbyte((1 << 4) | REL_SIMPLE | a->a_segment);
 #ifdef TARGET_BIGENDIAN
-		outab(a->a_value >> 8);
-		outab(a->a_value);
+		outabyte(av >> 8);
+		outabyte(av);
 #else
-		outab(a->a_value);
-		outab(a->a_value >> 8);
+		outabyte(av);
+		outabyte(av >> 8);
 #endif
 	}
 }
