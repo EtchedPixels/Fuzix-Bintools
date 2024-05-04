@@ -38,304 +38,304 @@ template: template.c
 	cc $(CFLAGS) template.c -o template
 
 as1802: $(HDR) $(CORE) as1-1802.c as6-1802.c
-	cc  -DTARGET_1802 -o as1802 $(CORE) as1-1802.c as6-1802.c
+	$(CC) $(CFLAGS) -DTARGET_1802 -o as1802 $(CORE) as1-1802.c as6-1802.c
 
 ld1802: $(HDR) ld.c
-	cc -o ld1802 ld.c
+	$(CC) $(CFLAGS) -o ld1802 ld.c
 
 nm1802: $(HDR) nm.c
-	cc -o nm1802 nm.c
+	$(CC) $(CFLAGS) -o nm1802 nm.c
 
 osize1802: $(HDR) osize.c
-	cc -o osize1802 osize.c
+	$(CC) $(CFLAGS) -o osize1802 osize.c
 
 dumprelocs1802: $(HDR) dumprelocs.o
-	cc -o dumprelocs1802 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs1802 dumprelocs.o
 
 as316: $(HDR) $(CORE) as1-316.c as6-316.c
-	cc  -DTARGET_316 -o as316 $(CORE) as1-316.c as6-316.c
+	$(CC) $(CFLAGS)  -DTARGET_316 -o as316 $(CORE) as1-316.c as6-316.c
 
 ld316: $(HDR) ld.c
-	cc -o ld316 ld.c
+	$(CC) $(CFLAGS) -o ld316 ld.c
 
 nm316: $(HDR) nm.c
-	cc -o nm316 nm.c
+	$(CC) $(CFLAGS) -o nm316 nm.c
 
 osize316: $(HDR) osize.c
-	cc -o osize316 osize.c
+	$(CC) $(CFLAGS) -o osize316 osize.c
 
 dumprelocs316: $(HDR) dumprelocs.o
-	cc -o dumprelocs316 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs316 dumprelocs.o
 
 as6502: $(HDR) $(CORE) as1-6502.c as6-6502.c
-	cc  -DTARGET_6502 -o as6502 $(CORE) as1-6502.c as6-6502.c
+	$(CC) $(CFLAGS)  -DTARGET_6502 -o as6502 $(CORE) as1-6502.c as6-6502.c
 
 ld6502: $(HDR) ld.c
-	cc -o ld6502 ld.c
+	$(CC) $(CFLAGS) -o ld6502 ld.c
 
 nm6502: $(HDR) nm.c
-	cc -o nm6502 nm.c
+	$(CC) $(CFLAGS) -o nm6502 nm.c
 
 osize6502: $(HDR) osize.c
-	cc -o osize6502 osize.c
+	$(CC) $(CFLAGS) -o osize6502 osize.c
 
 dumprelocs6502: $(HDR) dumprelocs.o
-	cc -o dumprelocs6502 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs6502 dumprelocs.o
 
 as6800: $(HDR) $(CORE) as1-6800.c as6-6800.c
-	cc  -DTARGET_6800 -o as6800 $(CORE) as1-6800.c as6-6800.c
+	$(CC) $(CFLAGS)  -DTARGET_6800 -o as6800 $(CORE) as1-6800.c as6-6800.c
 
 ld6800: $(HDR) ld.c
-	cc -o ld6800 ld.c
+	$(CC) $(CFLAGS) -o ld6800 ld.c
 
 nm6800: $(HDR) nm.c
-	cc -o nm6800 nm.c
+	$(CC) $(CFLAGS) -o nm6800 nm.c
 
 osize6800: $(HDR) osize.c
-	cc -o osize6800 osize.c
+	$(CC) $(CFLAGS) -o osize6800 osize.c
 
 dumprelocs6800: $(HDR) dumprelocs.o
-	cc -o dumprelocs6800 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs6800 dumprelocs.o
 
 as6805: $(HDR) $(CORE) as1-6805.c as6-6805.c
-	cc  -DTARGET_6805 -o as6805 $(CORE) as1-6805.c as6-6805.c
+	$(CC) $(CFLAGS)  -DTARGET_6805 -o as6805 $(CORE) as1-6805.c as6-6805.c
 
 ld6805: $(HDR) ld.c
-	cc -o ld6805 ld.c
+	$(CC) $(CFLAGS) -o ld6805 ld.c
 
 nm6805: $(HDR) nm.c
-	cc -o nm6805 nm.c
+	$(CC) $(CFLAGS) -o nm6805 nm.c
 
 osize6805: $(HDR) osize.c
-	cc -o osize6805 osize.c
+	$(CC) $(CFLAGS) -o osize6805 osize.c
 
 dumprelocs6805: $(HDR) dumprelocs.o
-	cc -o dumprelocs6805 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs6805 dumprelocs.o
 
 as6809: $(HDR) $(CORE) as1-6809.c as6-6809.c
-	cc  -DTARGET_6809 -o as6809 $(CORE) as1-6809.c as6-6809.c
+	$(CC) $(CFLAGS)  -DTARGET_6809 -o as6809 $(CORE) as1-6809.c as6-6809.c
 
 ld6809: $(HDR) ld.c
-	cc -o ld6809 ld.c
+	$(CC) $(CFLAGS) -o ld6809 ld.c
 
 nm6809: $(HDR) nm.c
-	cc -o nm6809 nm.c
+	$(CC) $(CFLAGS) -o nm6809 nm.c
 
 osize6809: $(HDR) osize.c
-	cc -o osize6809 osize.c
+	$(CC) $(CFLAGS) -o osize6809 osize.c
 
 dumprelocs6809: $(HDR) dumprelocs.o
-	cc -o dumprelocs6809 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs6809 dumprelocs.o
 
 as8008: $(HDR) $(CORE) as1-8008.c as6-8008.c
-	cc  -DTARGET_8008 -o as8008 $(CORE) as1-8008.c as6-8008.c
+	$(CC) $(CFLAGS)  -DTARGET_8008 -o as8008 $(CORE) as1-8008.c as6-8008.c
 
 ld8008: $(HDR) ld.c
-	cc -o ld8008 ld.c
+	$(CC) $(CFLAGS) -o ld8008 ld.c
 
 nm8008: $(HDR) nm.c
-	cc -o nm8008 nm.c
+	$(CC) $(CFLAGS) -o nm8008 nm.c
 
 osize8008: $(HDR) osize.c
-	cc -o osize8008 osize.c
+	$(CC) $(CFLAGS) -o osize8008 osize.c
 
 dumprelocs8008: $(HDR) dumprelocs.o
-	cc -o dumprelocs8008 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs8008 dumprelocs.o
 
 as8060: $(HDR) $(CORE) as1-8060.c as6-8060.c
-	cc  -DTARGET_8060 -o as8060 $(CORE) as1-8060.c as6-8060.c
+	$(CC) $(CFLAGS)  -DTARGET_8060 -o as8060 $(CORE) as1-8060.c as6-8060.c
 
 ld8060: $(HDR) ld.c
-	cc -o ld8060 ld.c
+	$(CC) $(CFLAGS) -o ld8060 ld.c
 
 nm8060: $(HDR) nm.c
-	cc -o nm8060 nm.c
+	$(CC) $(CFLAGS) -o nm8060 nm.c
 
 osize8060: $(HDR) osize.c
-	cc -o osize8060 osize.c
+	$(CC) $(CFLAGS) -o osize8060 osize.c
 
 dumprelocs8060: $(HDR) dumprelocs.o
-	cc -o dumprelocs8060 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs8060 dumprelocs.o
 
 as8070: $(HDR) $(CORE) as1-8070.c as6-8070.c
-	cc  -DTARGET_8070 -o as8070 $(CORE) as1-8070.c as6-8070.c
+	$(CC) $(CFLAGS)  -DTARGET_8070 -o as8070 $(CORE) as1-8070.c as6-8070.c
 
 ld8070: $(HDR) ld.c
-	cc -o ld8070 ld.c
+	$(CC) $(CFLAGS) -o ld8070 ld.c
 
 nm8070: $(HDR) nm.c
-	cc -o nm8070 nm.c
+	$(CC) $(CFLAGS) -o nm8070 nm.c
 
 osize8070: $(HDR) osize.c
-	cc -o osize8070 osize.c
+	$(CC) $(CFLAGS) -o osize8070 osize.c
 
 dumprelocs8070: $(HDR) dumprelocs.o
-	cc -o dumprelocs8070 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs8070 dumprelocs.o
 
 as8080: $(HDR) $(CORE) as1-8080.c as6-8080.c
-	cc  -DTARGET_8080 -o as8080 $(CORE) as1-8080.c as6-8080.c
+	$(CC) $(CFLAGS)  -DTARGET_8080 -o as8080 $(CORE) as1-8080.c as6-8080.c
 
 ld8080: $(HDR) ld.c
-	cc -o ld8080 ld.c
+	$(CC) $(CFLAGS) -o ld8080 ld.c
 
 nm8080: $(HDR) nm.c
-	cc -o nm8080 nm.c
+	$(CC) $(CFLAGS) -o nm8080 nm.c
 
 osize8080: $(HDR) osize.c
-	cc -o osize8080 osize.c
+	$(CC) $(CFLAGS) -o osize8080 osize.c
 
 dumprelocs8080: $(HDR) dumprelocs.o
-	cc -o dumprelocs8080 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs8080 dumprelocs.o
 
 as8086: $(HDR) $(CORE) as1-8086.c as6-8086.c
-	cc  -DTARGET_8086 -o as8086 $(CORE) as1-8086.c as6-8086.c
+	$(CC) $(CFLAGS)  -DTARGET_8086 -o as8086 $(CORE) as1-8086.c as6-8086.c
 
 ld8086: $(HDR) ld.c
-	cc -o ld8086 ld.c
+	$(CC) $(CFLAGS) -o ld8086 ld.c
 
 nm8086: $(HDR) nm.c
-	cc -o nm8086 nm.c
+	$(CC) $(CFLAGS) -o nm8086 nm.c
 
 osize8086: $(HDR) osize.c
-	cc -o osize8086 osize.c
+	$(CC) $(CFLAGS) -o osize8086 osize.c
 
 dumprelocs8086: $(HDR) dumprelocs.o
-	cc -o dumprelocs8086 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs8086 dumprelocs.o
 
 as9900: $(HDR) $(CORE) as1-tms9900.c as6-tms9900.c
-	cc  -DTARGET_TMS9900 -o as9900 $(CORE) as1-tms9900.c as6-tms9900.c
+	$(CC) $(CFLAGS)  -DTARGET_TMS9900 -o as9900 $(CORE) as1-tms9900.c as6-tms9900.c
 
 ld9900: $(HDR) ld.c
-	cc -o ld9900 ld.c
+	$(CC) $(CFLAGS) -o ld9900 ld.c
 
 nm9900: $(HDR) nm.c
-	cc -o nm9900 nm.c
+	$(CC) $(CFLAGS) -o nm9900 nm.c
 
 osize9900: $(HDR) osize.c
-	cc -o osize9900 osize.c
+	$(CC) $(CFLAGS) -o osize9900 osize.c
 
 dumprelocs9900: $(HDR) dumprelocs.o
-	cc -o dumprelocs9900 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocs9900 dumprelocs.o
 
 asee200: $(HDR) $(CORE) as1-ee200.c as6-ee200.c
-	cc  -DTARGET_EE200 -o asee200 $(CORE) as1-ee200.c as6-ee200.c
+	$(CC) $(CFLAGS)  -DTARGET_EE200 -o asee200 $(CORE) as1-ee200.c as6-ee200.c
 
 ldee200: $(HDR) ld.c
-	cc -o ldee200 ld.c
+	$(CC) $(CFLAGS) -o ldee200 ld.c
 
 nmee200: $(HDR) nm.c
-	cc -o nmee200 nm.c
+	$(CC) $(CFLAGS) -o nmee200 nm.c
 
 osizeee200: $(HDR) osize.c
-	cc -o osizeee200 osize.c
+	$(CC) $(CFLAGS) -o osizeee200 osize.c
 
 dumprelocsee200: $(HDR) dumprelocs.o
-	cc -o dumprelocsee200 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocsee200 dumprelocs.o
 
 ashc11: $(HDR) $(CORE) as1-hc11.c as6-hc11.c
-	cc  -DTARGET_HC11 -o ashc11 $(CORE) as1-hc11.c as6-hc11.c
+	$(CC) $(CFLAGS)  -DTARGET_HC11 -o ashc11 $(CORE) as1-hc11.c as6-hc11.c
 
 ldhc11: $(HDR) ld.c
-	cc -o ldhc11 ld.c
+	$(CC) $(CFLAGS) -o ldhc11 ld.c
 
 nmhc11: $(HDR) nm.c
-	cc -o nmhc11 nm.c
+	$(CC) $(CFLAGS) -o nmhc11 nm.c
 
 osizehc11: $(HDR) osize.c
-	cc -o osizehc11 osize.c
+	$(CC) $(CFLAGS) -o osizehc11 osize.c
 
 dumprelocshc11: $(HDR) dumprelocs.o
-	cc -o dumprelocshc11 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocshc11 dumprelocs.o
 
 asnova: $(HDR) $(CORE) as1-nova.c as6-nova.c
-	cc  -DTARGET_DGNOVA -o asnova $(CORE) as1-nova.c as6-nova.c
+	$(CC) $(CFLAGS)  -DTARGET_DGNOVA -o asnova $(CORE) as1-nova.c as6-nova.c
 
 ldnova: $(HDR) ld.c
-	cc -o ldnova ld.c
+	$(CC) $(CFLAGS) -o ldnova ld.c
 
 nmnova: $(HDR) nm.c
-	cc -o nmnova nm.c
+	$(CC) $(CFLAGS) -o nmnova nm.c
 
 osizenova: $(HDR) osize.c
-	cc -o osizenova osize.c
+	$(CC) $(CFLAGS) -o osizenova osize.c
 
 dumprelocsnova: $(HDR) dumprelocs.o
-	cc -o dumprelocsnova dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocsnova dumprelocs.o
 
 aspe16: $(HDR) $(CORE) as1-pe16.c as6-pe16.c
-	cc  -DTARGET_PE16 -o aspe16 $(CORE) as1-pe16.c as6-pe16.c
+	$(CC) $(CFLAGS)  -DTARGET_PE16 -o aspe16 $(CORE) as1-pe16.c as6-pe16.c
 
 ldpe16: $(HDR) ld.c
-	cc -o ldpe16 ld.c
+	$(CC) $(CFLAGS) -o ldpe16 ld.c
 
 nmpe16: $(HDR) nm.c
-	cc -o nmpe16 nm.c
+	$(CC) $(CFLAGS) -o nmpe16 nm.c
 
 osizepe16: $(HDR) osize.c
-	cc -o osizepe16 osize.c
+	$(CC) $(CFLAGS) -o osizepe16 osize.c
 
 dumprelocspe16: $(HDR) dumprelocs.o
-	cc -o dumprelocspe16 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocspe16 dumprelocs.o
 
 asz8: $(HDR) $(CORE) as1-z8.c as6-z8.c
-	cc  -DTARGET_Z8 -o asz8 $(CORE) as1-z8.c as6-z8.c
+	$(CC) $(CFLAGS)  -DTARGET_Z8 -o asz8 $(CORE) as1-z8.c as6-z8.c
 
 ldz8: $(HDR) ld.c
-	cc -o ldz8 ld.c
+	$(CC) $(CFLAGS) -o ldz8 ld.c
 
 nmz8: $(HDR) nm.c
-	cc -o nmz8 nm.c
+	$(CC) $(CFLAGS) -o nmz8 nm.c
 
 osizez8: $(HDR) osize.c
-	cc -o osizez8 osize.c
+	$(CC) $(CFLAGS) -o osizez8 osize.c
 
 dumprelocsz8: $(HDR) dumprelocs.o
-	cc -o dumprelocsz8 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocsz8 dumprelocs.o
 
 assuper8: $(HDR) $(CORE) as1-super8.c as6-super8.c
-	cc  -DTARGET_SUPER8 -o assuper8 $(CORE) as1-super8.c as6-super8.c
+	$(CC) $(CFLAGS)  -DTARGET_SUPER8 -o assuper8 $(CORE) as1-super8.c as6-super8.c
 
 ldsuper8: $(HDR) ld.c
-	cc -o ldsuper8 ld.c
+	$(CC) $(CFLAGS) -o ldsuper8 ld.c
 
 nmsuper8: $(HDR) nm.c
-	cc -o nmsuper8 nm.c
+	$(CC) $(CFLAGS) -o nmsuper8 nm.c
 
 osizesuper8: $(HDR) osize.c
-	cc -o osizesuper8 osize.c
+	$(CC) $(CFLAGS) -o osizesuper8 osize.c
 
 dumprelocssuper8: $(HDR) dumprelocs.o
-	cc -o dumprelocssuper8 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocssuper8 dumprelocs.o
 
 asgb: $(HDR) $(CORE) as1-gb.c as6-gb.c
-	cc  -DTARGET_GB -o asgb $(CORE) as1-gb.c as6-gb.c
+	$(CC) $(CFLAGS)  -DTARGET_GB -o asgb $(CORE) as1-gb.c as6-gb.c
 
 ldgb: $(HDR) ld.c
-	cc -o ldgb ld.c
+	$(CC) $(CFLAGS) -o ldgb ld.c
 
 nmgb: $(HDR) nm.c
-	cc -o nmgb nm.c
+	$(CC) $(CFLAGS) -o nmgb nm.c
 
 osizegb: $(HDR) osize.c
-	cc -o osizegb osize.c
+	$(CC) $(CFLAGS) -o osizegb osize.c
 
 dumprelocsgb: $(HDR) dumprelocs.o
-	cc -o dumprelocsgb dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocsgb dumprelocs.o
 
 asz80: $(HDR) $(CORE) as1-z80.c as6-z80.c
-	cc  -DTARGET_Z80 -o asz80 $(CORE) as1-z80.c as6-z80.c
+	$(CC) $(CFLAGS)  -DTARGET_Z80 -o asz80 $(CORE) as1-z80.c as6-z80.c
 
 ldz80: $(HDR) ld.c
-	cc -o ldz80 ld.c
+	$(CC) $(CFLAGS) -o ldz80 ld.c
 
 nmz80: $(HDR) nm.c
-	cc -o nmz80 nm.c
+	$(CC) $(CFLAGS) -o nmz80 nm.c
 
 osizez80: $(HDR) osize.c
-	cc -o osizez80 osize.c
+	$(CC) $(CFLAGS) -o osizez80 osize.c
 
 dumprelocsz80: $(HDR) dumprelocs.o
-	cc -o dumprelocsz80 dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocsz80 dumprelocs.o
 
 clean:
 	rm -f *.o *~
