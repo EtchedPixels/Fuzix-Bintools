@@ -31,7 +31,7 @@ later:
 	output is then segbyteh or segbytel and follows same rules as segment
 	(what about mixing them ?)
 
-	PC relative 8 and 16bit addressing (including dealing with processors
+DONE	PC relative 8 and 16bit addressing (including dealing with processors
 	using .+2 etc as the base).
 
 DONE - Proper output logic
@@ -48,7 +48,7 @@ Relocation types
 DONE	versus our segment base for this object module (usual)
 DONE	versus other segment base for this module
 DONE	versus unresolved symbol
-IP	PC relative (not so much Z80)
+DONE	PC relative (not so much Z80)
 
 Need to support relocations for 16bit and also 8bit ZP. Do we need to extend
 the assembler to support relocations for high 8 / low 8 ? Probably not for Z80
@@ -70,4 +70,17 @@ DONE	Unresolved symbols allowed for -r
 	copy all the debug symbols (relocating as we go)
 
 DONE	Libraries
-	Ranlib
+XXX	Ranlib (sorted instead)
+
+
+Idea
+	.module
+
+	Assembler would flush all locals across the .module boundary
+	Would get relocations for each thing across boundary if done right
+	(test on globals and module id)
+	Could we even just make it a .o file having multiple obj headers etc ?
+
+	Basically we need a multiple object module format for objects too
+	for banked stuff etc and nice packing for segments or rolling 8K
+	and so on. Could use ar format and pull in each module for .o
