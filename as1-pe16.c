@@ -20,13 +20,6 @@ static void constify(ADDR *ap)
 		ap->a_type = TUSER;
 }
 
-static int segment_incompatible(ADDR *ap)
-{
-	if (ap->a_segment == segment)
-		return 0;
-	return 1;
-}
-
 /*
  *	Read in a register descriptor. Also works for short forms
  */
@@ -133,7 +126,6 @@ void asmline(void)
 	SYM *sp;
 	int c;
 	int opcode;
-	int cc;
 	VALUE value;
 	int delim;
 	SYM *sp1;
@@ -141,9 +133,6 @@ void asmline(void)
 	char id1[NCPS];
 	ADDR a1;
 	ADDR a2;
-	int ta1;
-	int ta2;
-	int disp;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
