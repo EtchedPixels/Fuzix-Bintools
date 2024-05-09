@@ -102,8 +102,9 @@ SYM	sym[] = {
 	   repurposed for checking the interrupt flag */
 	{	0,	"bie",		TREL8,		0x1E	},
 	{	0,	"bep",		TREL8,		0x1F	},
-	
-	/* Special magic forms : these will be smart one day */
+
+	/* Assembler pseudo instructions - generates a br or reverse
+	   branch over jump according to distance */	
 	{	0,	"jc",		TBRA16,		0x10	},
 	{	0,	"jcc",		TBRA16,		0x11	},
 	{	0,	"jn",		TBRA16,		0x12	},
