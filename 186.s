@@ -125,7 +125,23 @@ foo:
 	loopnz foo
 	loope foo
 	loopne foo
-;	mov
+	mov es,ax
+	mov ax,ds
+	mov ax,11
+	mov al,12
+	mov ah,10
+	mov bx,12
+	mov ax,[0x1234]
+	mov al,[0x1234]
+	mov [0x1234],ax
+	mov [0x1234],al
+	mov bx,[0x1234]
+	mov [0x1234],bx
+;	mov [bp + 4], 12
+	mov ax,[bx]
+	mov [bx],ax
+	mov [bx],12
+	mov [1234],12
 ;	movs
 	movsb
 	movsw
