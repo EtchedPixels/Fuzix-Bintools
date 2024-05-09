@@ -66,17 +66,6 @@ static void constify(ADDR *ap)
 		ap->a_type = TUSER;
 }
 
-static void constant_to_dp(ADDR *ap)
-{
-	if (ap->a_segment != ABSOLUTE || ap->a_sym)
-		return;
-	/* FIMXE: need to support .setdp */
-	if (ap->a_value > 255)
-		return;
-	ap->a_segment = ZP;
-	return;
-}
-
 /*
  *	Parse a register. We do this by hand due to the ++/-- formats etc
  *	and also because we need it for excg/tfr/psh/pop
@@ -263,7 +252,6 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 	unsigned hasleft = 0;	/* was a left side to indexed from */
 	unsigned dp = 0;
 	unsigned type;
-	unsigned reg;
 	unsigned c;
 
 	ap->a_type = 0;
@@ -418,12 +406,12 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 
 void getaddr_r(ADDR *ap)
 {
-	return getaddr_op(ap, 0);
+	getaddr_op(ap, 0);
 }
 
 void getaddr(ADDR *ap)
 {
-	return getaddr_op(ap, 1);
+	getaddr_op(ap, 1);
 }
 
 unsigned is_indexed(ADDR *ap)
@@ -681,9 +669,6 @@ void asmline(void)
 	int c;
 	int opcode;
 	int disp;
-	int reg;
-	int srcreg;
-	int cc;
 	VALUE value;
 	int delim;
 	SYM *sp1;
