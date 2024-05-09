@@ -211,14 +211,12 @@ void asmline(void)
 	SYM *sp;
 	int c;
 	int opcode;
-	int reg;
 	VALUE value;
 	int delim;
 	SYM *sp1;
 	char id[NCPS];
 	char id1[NCPS];
 	ADDR a1;
-	ADDR a2;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
