@@ -24,7 +24,6 @@ int passbegin(int pass)
  */
 void getaddr(ADDR *ap)
 {
-	int reg;
 	int c;
 
 	ap->a_sym = NULL;
@@ -52,6 +51,7 @@ static int accumulator(void)
 {
 	int c = getnb();
 	if (c < '0' || c > '3') {
+		printf("AC '%c'\n", c);
 		aerr(BAD_ACCUMULATOR);
 		unget(c);
 		return 0;
@@ -105,18 +105,14 @@ void asmline(void)
 	int c;
 	int acs, acd;
 	int opcode;
-	int disp;
-	int reg;
-	int srcreg;
-	int cc;
 	VALUE value;
 	int delim;
 	SYM *sp1;
 	char id[NCPS];
 	char id1[NCPS];
-	char iid[4];
+	char iid[NCPS];
 	ADDR a1;
-	ADDR a2;
+	char *p;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
@@ -138,7 +134,7 @@ loop:
 		} else {
 			if ((sp->s_type&TMMDF) != 0)
 				err('m', MULTIPLE_DEFS);
-			if (sp->s_value != dot[segment])
+			if (sp->s_value != dot[segment] >> 1)
 				err('p', PHASE_ERROR);
 		}
 		goto loop;
@@ -146,7 +142,7 @@ loop:
 	/* We have to do ugly things here because the Nova instruction set
 	   merges the opcode and flags */
 	memcpy(iid, id, 4);
-	iid[3] = 0;
+	memset(iid + 3, 0, NCPS - 3);
 	
 	/*
 	 * If the first token is an
@@ -154,7 +150,9 @@ loop:
 	 * assume that it is the name in front
 	 * of an "equ" assembler directive.
 	 */
-	if ((sp=lookup(id, phash, 0)) == NULL &&
+
+	/* Check for .equ forms */
+	if ((sp = lookup(id, phash, 0)) == NULL && 
 		(sp = lookup(iid, phash, 0)) == NULL) {
 		getid(id1, c);
 		if ((sp1=lookup(id1, phash, 0)) == NULL
@@ -176,9 +174,10 @@ loop:
 		   what should happen */
 		goto loop;
 	}
+
 	unget(c);
 	opcode = sp->s_value;
-	
+
 	switch (sp->s_type&TMMODE) {
 	case TORG:
 		getaddr(&a1);
@@ -298,11 +297,12 @@ loop:
 		}
 		getaddr(&a1);
 		c = get();
-		disp = 0;
 		if (c == ',')
 			acs = accumulator();
-		else
+		else {
+			acs = 0;
 			unget(c);
+		}
 		/* ,0 means zero page */
 		if (acs == 0) {
 			if (a1.a_segment == UNKNOWN)
@@ -333,27 +333,121 @@ loop:
 		break;
 	}
 
+	/* Akin to TMEMORY but with no accumulator */
+	case TMEMNA:
+	{
+		int indirect = 0;
+		/*
+		 *	Memory operations are either
+		 *	0,disp		Word 0-255 (zero page)
+		 *	1,signed disp	PC relative
+		 *	2.disp		ac2 + offset
+		 *	3,disp		ac3 + offset
+		 *
+		 *	We don't enforce any rules on ac2/ac3 but encode
+		 *	them on the basis the user knows what they are doing
+		 *
+		 *	0,disp is encoded is an 8 bit relocation for ZP
+		 *	1,disp FIXME needs to be encoded as an 8bit PCREL
+		 *
+		 *	There is *no* immediate load nor is there anyway
+		 *	to load arbitrary addresses.
+		 *
+		 *	FIXME: we need some Nova specific meta ops as a
+		 *	result
+		 *
+		 *	.nomodify	- don't sneak in data words
+		 *	.modify		- allowed to sneak in data words
+		 *	.local		- local data word
+		 *	.flushlocal	- write locals out here
+		 *
+		 *	local data words are placed in a queue with their
+		 *	relocation address. During pass 0 we try to place them
+		 *	by adding ,skp to TALU instructions and putting one
+		 *	after it. If we reach the point it won't fit we add a
+		 *	JMP around the data and load with data. Likewise we
+		 *	can fill after a jump.
+		 *
+		 *	This has its own fun... a jump is itself pcrel or
+		 *	constrained. Fortunately however we can encode an
+		 *	arbitrary jump as JMP #.+1 and a word. We can't do
+		 *	this ourself with JSR but compilers can jmp 3,1
+		 *	and do it.
+		 *
+		 *	For A2/A3 the same way to write stuff is likely to be
+		 *
+		 *	; a2 is loaded with foo
+		 *
+		 *	LDA 1,bar-foo,2
+		 *
+		 *	and the assembler with turn bar-foo into an ABSOLUTE
+		 */
+		c = get();
+		if (c == '@')
+			indirect = 1;
+		else {
+			unget(c);
+			indirect = 0;
+		}
+		getaddr(&a1);
+		c = get();
+		if (c == ',')
+			acs = accumulator();
+		else {
+			acs = 0;	 
+			unget(c);
+		}
+		/* ,0 means zero page */
+		if (acs == 0) {
+			if (a1.a_segment == UNKNOWN)
+				a1.a_segment = ZP;
+			if (a1.a_segment != ZP && a1.a_segment != ABSOLUTE)
+				aerr(NEED_ZPABS);
+		}
+		/* ,2 + are indexes so we can't really police them for sanity */
+		/* ,1 is PC relative so must be in this segment */
+		if (acs == 1) {
+			if (a1.a_segment == UNKNOWN)
+				a1.a_segment = segment;
+			else if (a1.a_segment != ABSOLUTE && a1.a_segment != segment)
+				aerr(BAD_PCREL);
+			if (a1.a_segment != ABSOLUTE)
+				a1.a_type |= TPCREL;
+		}
+		/* Insert the accumulators */
+		opcode |= (acs << 8);
+		if (indirect)
+			opcode |= 0x0400;
+		if (acs)
+			outrabrel(&a1);	/* Signed */
+		else if (acs == 0)
+			outrab(&a1);	/* Unsigned */
+		outab(opcode >> 8);
+		break;
+	}
+
 	case TALU:
 	{
-		char *p = id + 3;
 		SYM *skp = NULL;
 		int drop;
 		int cf;
 		int sh;
 
+		p = id + 3;
 		cf = carryop(*p);
 		if (cf)
 			p++;
 		sh = postop(*p);
 		if (sh)
 			p++;
-		c = get();
+		c = getnb();
 		if (c == '#')
 			drop = 1;
-		else {
+		else  {
 			unget(c);
 			drop = 0;
 		}
+
 		acs = accumulator();
 		comma();
 		acd = accumulator();
@@ -377,6 +471,15 @@ loop:
 	}
 
 	case TIO:
+		p = id + 3;
+		if (*p == 's')
+			opcode |= 1 << 6;
+		else if (*p == 'c')
+			opcode |= 2 << 6;
+		else if (*p == 'p')
+			opcode |= 3 << 6;
+		else if (*p)
+			aerr(SYNTAX_ERROR);
 		acs = accumulator();
 		comma();
 		getaddr(&a1);
@@ -389,6 +492,8 @@ loop:
 		break;
 
 	case TDEV:
+		/* SKP is ambiguous so we list the four forms directly
+		   in the table to avoid this */
 		getaddr(&a1);
 		istuser(&a1);
 		if (a1.a_value > 63)

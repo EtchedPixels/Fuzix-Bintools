@@ -46,12 +46,11 @@ SYM	sym[] = {
 	{	0,	".commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	".buffers",	TSEGMENT,	BUFFERS	},
 	
-	{	0,	"jmp",		TMEMORY,	0x0000  },
-	{	0,	"jsr",		TMEMORY,	0x0800  },
-	{	0,	"isz",		TMEMORY,	0x1000  },
-	{	0,	"dsz",		TMEMORY,	0x1800	},
+	{	0,	"jmp",		TMEMNA,		0x0000  },
+	{	0,	"jsr",		TMEMNA,		0x0800  },
+	{	0,	"isz",		TMEMNA,		0x1000  },
+	{	0,	"dsz",		TMEMNA,		0x1800	},
 	{	0,	"lda",		TMEMORY,	0x2000	},
-	{	0,	"inc",		TMEMORY,	0x3000	},
 	{	0,	"sta",		TMEMORY,	0x4000	},
 
 	{	0,	"com",		TALU,		0x8000	},
@@ -61,6 +60,7 @@ SYM	sym[] = {
 	{	0,	"sub",		TALU,		0x8500	},
 	{	0,	"add",		TALU,		0x8600  },
 	{	0,	"and",		TALU,		0x8700	},
+	{	0,	"inc",		TALU,		0x8300  },
 	
 	{	0,	"dia",		TIO,		0x6100	},
 	{	0,	"doa",		TIO,		0x6200	},
@@ -68,7 +68,11 @@ SYM	sym[] = {
 	{	0,	"dob",		TIO,		0x6400	},
 	{	0,	"dic",		TIO,		0x6500	},
 	{	0,	"doc",		TIO,		0x6600	},
-	{	0,	"skp",		TDEV,		0x6700	},
+
+	{	0,	"skpbn",	TDEV,		0x6700	},
+	{	0,	"skpbz",	TDEV,		0x6740	},
+	{	0,	"skpdn",	TDEV,		0x6780	},
+	{	0,	"skpdz",	TDEV,		0x67C0	},
 	
 	
 	/* Then the post NOVA 1 operations that are less elegant being
@@ -149,7 +153,6 @@ char *etext[] = {
 void isokaors(ADDR *ap, int paren)
 {
 	int mode;
-	int reg;
 
 	mode = ap->a_type&TMMODE;
 	if (mode == TUSER)

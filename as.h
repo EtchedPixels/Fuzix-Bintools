@@ -530,6 +530,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #elif TARGET_DGNOVA
 
 #define TARGET_WORD_MACHINE
+#define TARGET_BIGENDIAN
 
 /* 16 bit machine but we need to track in 32bits to allow for the fact we
    can be dealing with 2^16 words */
@@ -538,7 +539,7 @@ typedef	uint32_t	VALUE;		/* For symbol values */
 #define SEGMENT_LIMIT	0x10000		/* bytes */
 
 #define ARCH OA_DGNOVA
-#define ARCH_FLAGS OF_WORDMACHINE
+#define ARCH_FLAGS (OF_WORDMACHINE|OF_BIGENDIAN)
 #define ARCH_CPUFLAGS 0
 
 
@@ -582,6 +583,7 @@ typedef	uint32_t	VALUE;		/* For symbol values */
 #define TIMPL	0x1700
 #define TBYTE	0x1800
 #define TTRAP	0x1900
+#define TMEMNA	0x1A00
 
 #define TPCREL	0x0010
 
