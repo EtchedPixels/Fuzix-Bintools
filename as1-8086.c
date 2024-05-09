@@ -303,9 +303,6 @@ void asmline(void)
 	int c;
 	int opcode;
 	int disp;
-	int reg;
-	int srcreg;
-	int cc;
 	VALUE value;
 	int delim;
 	SYM *sp1;
