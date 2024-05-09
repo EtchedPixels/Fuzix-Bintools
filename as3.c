@@ -18,6 +18,7 @@ void istuser(ADDR *ap)
 		aerr(ADDR_REQUIRED);
 }
 
+#if 0
 /*
  * A segment needs to meet a rule. Make sure that we don't have
  * internmal inconsistency
@@ -33,6 +34,7 @@ static void setsegment(SYM *s, int seg)
 	}
 	aerr(SEGMENT_CLASH);
 }
+#endif
 
 static void chkabsolute(ADDR *a)
 {
