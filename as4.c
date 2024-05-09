@@ -357,9 +357,10 @@ void outrawrel(ADDR *a)
 		outabyte(av >> 8);
 #endif
 		return;
-	} else if (0 && segment == a->a_segment) {
+	} else if (segment == a->a_segment) {
 		/* We don't need to issue a relocation if it's within
 		   segment */
+		av -= dot[segment];
 #ifdef TARGET_BIGENDIAN
 		outab(av >> 8);
 		outab(av);
