@@ -122,13 +122,6 @@ void getaddr(ADDR *ap)
 	}
 }
 
-/* Little endian */
-static void outaw(uint16_t a)
-{
-	outab(a);
-	outab(a >> 8);
-}
-
 /* This is a bit hackish but covers the special case of LD HL,SP + n */
 int is_ldsp;
 
@@ -631,7 +624,7 @@ static void asmld(void)
 	}
 	/* ld hl, SP + n */
 	if (mdst == TWR && rdst == HL && msrc == TWR && rsrc == SP) {
-		unsigned c = getnb();
+		getnb();
 		outab(0xF8);
 		outrab(&src);
 		return;
