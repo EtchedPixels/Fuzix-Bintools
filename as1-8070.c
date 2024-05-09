@@ -199,7 +199,6 @@ void getaddr_i(ADDR *ap)
 void getaddr(ADDR *ap)
 {
 	int c;
-	unsigned m;
 
 	ap->a_type = 0;
 	ap->a_flags = 0;
@@ -598,7 +597,7 @@ loop:
 			outptr(&a2);
 			break;
 		case  TAUTOINDEX:
-			outab(opcode | (a2.a_type & TMREG)  + 4);
+			outab((opcode | (a2.a_type & TMREG))  + 4);
 			outptr(&a2);
 			break;
 		default:
@@ -641,7 +640,7 @@ loop:
 			outptr(&a2);
 			break;
 		case TAUTOINDEX:
-			outab(opcode | (a2.a_type & TMREG)  + 4);
+			outab((opcode | (a2.a_type & TMREG))  + 4);
 			outptr(&a2);
 			break;
 		default:
