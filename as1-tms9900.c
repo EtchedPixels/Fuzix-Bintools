@@ -4,7 +4,6 @@
  */
 #include	"as.h"
 
-static int cputype;
 /* FIXME: we should malloc/realloc this on non 8bit machines */
 static uint8_t reltab[1024];
 static unsigned int nextrel;
