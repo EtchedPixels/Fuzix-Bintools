@@ -25,3 +25,7 @@ struct object {
 
 #define NHASH	64	/* Must be a power of 2 */
 
+/* Methods shared for use in target modules */
+extern void warning(const char *p);
+extern void error(const char *p);
+extern unsigned io_readb(uint8_t *ch);

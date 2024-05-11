@@ -30,10 +30,18 @@
  *	There are a few things not yet addressed
  *	1.	For speed libraries can start with an _RANLIB ar file node which
  *		is an index of all the symbols by library module for speed.
- *	2.	Testing bigendian support.
- *	3.	Banked binaries (segments 5-7 ?).
- *	4.	Use typedefs and the like to support 32bit as well as 16bit
+ *	2.	Banked binaries (segments 5-7 ?).
+ *	3.	Use typedefs and the like to support 32bit as well as 16bit
  *		addresses when built on bigger machines..
+ *	4.	For word addressing
+ *		- we need to deal with bytepointers (ptr scaling encoding needs
+ *		  adding)
+ *		- we need to scale o_base when adjusting symbols as o_base
+ *		  is in bytes.
+ *		- we need to deal with overflows resulting from word to byte
+ *		  conversion on symbols.
+ *		- we need to deal with the fact some stuff is tracked at
+ *		  byte level.
  */
 
 #include <stdio.h>
@@ -93,7 +101,7 @@ static FILE *relocf;
  *	Report an error, and if possible give the object or library that
  *	we were processing.
  */
-static void warning(const char *p)
+void warning(const char *p)
 {
 	if (processing)
 		fprintf(stderr, "While processing: %s", processing->path);
@@ -105,7 +113,7 @@ static void warning(const char *p)
 	err |= 2;
 }
 
-static void error(const char *p)
+void error(const char *p)
 {
 	warning(p);
 	exit(err);
@@ -223,7 +231,7 @@ static unsigned io_read16(void)
 /* Our embedded relocs make this a hot path so optimize it. We may
    want a helper that hands back blocks until the reloc marker ? */
 
-static unsigned io_readb(uint8_t *ch)
+unsigned io_readb(uint8_t *ch)
 {
 	if (iopos < iolen) {
 		iopos++;
@@ -988,6 +996,12 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				xfseek(op, dot);
 			continue;
 		}
+#ifdef TARGET_RELOC
+		if (code == REL_TARGET) {
+			target_relocate(o, segment, op);
+			continue;
+		}
+#endif
 		if (code == REL_PCR) {
 			pcrel = 1;
 			io_readb(&code);
@@ -1011,6 +1025,8 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 			if (seg == ABSOLUTE || seg >= OSEG || size > 2) {
 				fprintf(stderr, "%s invalid reloc %d %d\n",
 					o->path, seg, size);
+				fprintf(stderr, "pcrel %u over %u high %u\n",
+					pcrel, overflow, high);
 				error("invalid reloc");
 			}
 			/* If we are not building an absolute then keep the tag */
