@@ -319,6 +319,7 @@ loop:
 				aerr(BAD_PCREL);
 			if (a1.a_segment != ABSOLUTE)
 				a1.a_type |= TPCREL;
+			a1.a_value -= dot[segment] / 2;
 		}
 		/* Insert the accumulators */
 		opcode |= (acd << 13);
@@ -327,7 +328,7 @@ loop:
 			opcode |= 0x0400;
 		if (acs)
 			outrabrel(&a1);	/* Signed */
-		else if (acs == 0)
+		else
 			outrab(&a1);	/* Unsigned */
 		outab(opcode >> 8);
 		break;
@@ -413,6 +414,7 @@ loop:
 				aerr(BAD_PCREL);
 			if (a1.a_segment != ABSOLUTE)
 				a1.a_type |= TPCREL;
+			a1.a_value -= dot[segment] / 2;
 		}
 		/* Insert the accumulators */
 		opcode |= (acs << 8);
