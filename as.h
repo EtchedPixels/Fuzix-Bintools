@@ -584,6 +584,7 @@ typedef	uint32_t	VALUE;		/* For symbol values */
 #define TBYTE	0x1800
 #define TTRAP	0x1900
 #define TMEMNA	0x1A00
+#define TBPTR	0x1B00			/* Nova byteptr */
 
 #define TPCREL	0x0010
 
@@ -2277,6 +2278,7 @@ extern void outbyte(uint8_t);
 extern void outflush(void);
 extern void syminit(void);
 extern void reservebyte(void);
+extern void outscale(unsigned, unsigned);
 
 extern char *etext[];
 

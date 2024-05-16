@@ -17,6 +17,10 @@ static off_t segbase[OSEG];
 static uint16_t segpad[OSEG];
 static uint8_t full[OSEG];	/* So we can tell a full wrap from a 0 start */
 
+static uint16_t mask = 0xFFFF;
+static int_fast8_t shift = 0;
+static unsigned rel_check = 0;
+
 static struct objhdr obh;
 
 static void dumpseginfo(void)
@@ -132,9 +136,12 @@ static void check_store_allowed(uint8_t segment, uint16_t value)
  *	A_LOW and A_HIGH indicate 8bit partial relocations. We handle these
  *	internally.
  */
-static void outreloc(ADDR *a, int bytes)
+static void outreloc(register ADDR *a, int bytes)
 {
 	int s = (bytes - 1) << 4;
+	unsigned n = a->a_value;
+	unsigned f = a->a_flags;
+
 	/* We must insert a relocation record for anything relocatable,
 	   but also for anything which is a symbol, as the linker may
 	   need to do absolute resolution between modules */
@@ -145,18 +152,18 @@ static void outreloc(ADDR *a, int bytes)
 		outbyte(REL_OVERFLOW);
 #endif
 		/* TODO: Better error ? */
-		if (bytes != 1 && (a->a_flags & (A_LOW|A_HIGH)))
+		if (bytes != 1 && (f & (A_LOW|A_HIGH)))
 			qerr(CONSTANT_RANGE);
 		/* low bits of 16 bit is an 8bit relocation with
 		   overflow suppressed */
-		if (a->a_flags & A_LOW) {
+		if (f & A_LOW) {
 #ifndef TARGET_RELOC_OVERFLOW_OK
 			outbyte(REL_OVERFLOW);
 #endif
 			s = 0 << 4;
-			a->a_value &= 0xFF;
+			n &= 0xFF;
 		}
-		if (a->a_flags & A_HIGH) {
+		if (f & A_HIGH) {
 			outbyte(REL_HIGH);
 			/* High relocations are two byte to allow the linker
 			   to calculate carry between the low/high byte */
@@ -175,52 +182,62 @@ static void outreloc(ADDR *a, int bytes)
 			outbyte(a->a_sym->s_number >> 8);
 		}
 		/* Relocatable constant, store unquoted as know the size */
-		if (a->a_flags & A_LOW)
-			outabyte(a->a_value);
-		else if (a->a_flags & A_HIGH) {
+		if (f & A_LOW)
+			outabyte(n);
+		else if (f & A_HIGH) {
 #ifdef TARGET_BIGENDIAN
-			outabyte(a->a_value >> 8);
+			outabyte(n >> 8);
 			/* We need this to relocate but it is not really in
 			   the program stream so don't count it as such */
-			outbyte(a->a_value);
+			outbyte(n);
 #else
-			outbyte(a->a_value);
-			outabyte(a->a_value >> 8);
+			outbyte(n);
+			outabyte(n >> 8);
 #endif
 		} else {
 			if (bytes == 1)
 				/* abchk2 ? */
-				outabyte(a->a_value);
+				outabyte(n);
 			else {
 #ifdef TARGET_BIGENDIAN
-				outabyte(a->a_value >> 8);
-				outabyte(a->a_value);
+				outabyte(n >> 8);
+				outabyte(n);
 #else
-				outabyte(a->a_value);
-				outabyte(a->a_value >> 8);
+				outabyte(n);
+				outabyte(n >> 8);
 #endif
 			}
 		}
 	} else {
 		/* Relocatable constant. This may change and thus need
 		   to be padded */
-		if (a->a_flags & A_HIGH) {
-			outab2(a->a_value >> 8);
-		} else if (a->a_flags & A_LOW) {
-			if (bytes == 1)
-				outab2(a->a_value & 0xFF);
+		if (shift) {
+			if (shift < 0)
+				n <<= shift;
 			else
-				outab2(a->a_value & 0xFF);
+				n >>= shift;
+		}
+		if (rel_check && (n & ~mask))
+			err('o', CONSTANT_RANGE);
+		n &= mask;
+
+		if (f & A_HIGH) {
+			outab2(n >> 8);
+		} else if (f & A_LOW) {
+			if (bytes == 1)
+				outab2(n & 0xFF);
+			else
+				outab2(n & 0xFF);
 		} else {
 			if (bytes == 1)
-				outab(a->a_value);
+				outab(n);
 			else {
 #ifdef TARGET_BIGENDIAN
-				outab2(a->a_value >> 8);
-				outab2(a->a_value);
+				outab2(n >> 8);
+				outab2(n);
 #else
-				outab2(a->a_value);
-				outab2(a->a_value >> 8);
+				outab2(n);
+				outab2(n >> 8);
 #endif
 			}
 		}
@@ -304,17 +321,18 @@ void outab2(uint8_t b)
 	list_addbyte(b);
 }
 
-void outabchk2(ADDR *a)
+void outabchk2(register ADDR *a)
 {
 	uint8_t b;
+	register unsigned v = a->a_value;
 	if (a->a_flags & A_LOW)
-		b = a->a_value;
+		b = v;
 	else if (a->a_flags & A_HIGH)
-		b = a->a_value >> 8;
+		b = v >> 8;
 	else  {
-		if (a->a_value > 255)
+		if (v > 255)
 			err('o', CONSTANT_RANGE);
-		b = a->a_value;
+		b = v;
 	}
 	outab(b);
 }
@@ -333,6 +351,15 @@ void outrabrel(ADDR *a)
 		outbyte(a->a_value >> 8);
 		return;
 	}
+	if (shift) {
+		if (shift < 0)
+			v <<= shift;
+		else
+			v >>= shift;
+	}
+	if (rel_check && (v & ~mask))
+		err('o', CONSTANT_RANGE);
+	v &= mask;
 	if (v < -128 || v > 127)
 		err('o', CONSTANT_RANGE);
 	/* relatives without a symbol don't need relocation but they
@@ -361,6 +388,15 @@ void outrawrel(ADDR *a)
 		/* We don't need to issue a relocation if it's within
 		   segment */
 		av -= dot[segment];
+		if (shift) {
+			if (shift < 0)
+				av <<= shift;
+			else
+				av >>= shift;
+		}
+		if (rel_check && (av & ~mask))
+			err('o', CONSTANT_RANGE);
+		av &= mask;
 #ifdef TARGET_BIGENDIAN
 		outab(av >> 8);
 		outab(av);
@@ -485,4 +521,19 @@ void outbyte(uint8_t b)
 void reservebyte(void)
 {
 	segpad[segment]++;
+}
+
+void outscale(unsigned s, unsigned m)
+{
+	outbyte(REL_ESC);
+	outbyte(REL_MOD);
+	outbyte(m);
+	outbyte(s);
+	mask =  (1UL << (m & 0x1F)) - 1;
+	if (m & 0x80)
+		mask = ~mask;
+	shift = s & 0x0F;
+	if (shift & 0x80)
+		s = -s;
+	rel_check = m & 0x40;
 }
