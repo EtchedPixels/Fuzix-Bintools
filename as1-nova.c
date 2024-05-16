@@ -5,12 +5,29 @@
  */
 #include	"as.h"
 
+static unsigned is_bp[OSEG + 1];
+
 int passbegin(int pass)
 {
+	unsigned i;
 	segment = 1;		/* Default to code */
+	for (i = 0; i < OSEG + 1; i++)
+		is_bp[i] = 1;		/* Linker initially assumes byteptrs */
+	outscale(0,16);		/* Reset internal tracking */
 	if (pass == 1 || pass == 2)
 		return 0;
 	return 1;		/* All passes required */
+}
+
+void byteptr(unsigned n)
+{
+	if (n == is_bp[segment])
+		return;
+	is_bp[segment] = n;
+	if (n == 0)
+		outscale(1, 16);
+	else
+		outscale(0, 16);
 }
 
 /*
@@ -34,7 +51,7 @@ void getaddr(ADDR *ap)
 	   Quite how we encode it is another saga because our memory ops
 	   use register relative or pc relative */
 	c = getnb();
-	if (c != '#')
+	if (/*c != '#' && */c != '@')	/* Until we support literal adding */
 		unget(c);
 	expr1(ap, LOPRI, 1);
 	switch (ap->a_type&TMMODE) {
@@ -51,7 +68,6 @@ static int accumulator(void)
 {
 	int c = getnb();
 	if (c < '0' || c > '3') {
-		printf("AC '%c'\n", c);
 		aerr(BAD_ACCUMULATOR);
 		unget(c);
 		return 0;
@@ -86,7 +102,7 @@ static int postop(char c)
 /*
  *	Word sized binary output
  */
- 
+
 void outaw(uint16_t v)
 {
 	outab(v);
@@ -129,12 +145,12 @@ loop:
 			sp->s_type &= ~TMMODE;
 			sp->s_type |= TUSER;
 			/* Word machine so half the byte count */
-			sp->s_value = dot[segment] >> 1;
+			sp->s_value = dot[segment];
 			sp->s_segment = segment;
 		} else {
 			if ((sp->s_type&TMMDF) != 0)
 				err('m', MULTIPLE_DEFS);
-			if (sp->s_value != dot[segment] >> 1)
+			if (sp->s_value != dot[segment])
 				err('p', PHASE_ERROR);
 		}
 		goto loop;
@@ -143,7 +159,7 @@ loop:
 	   merges the opcode and flags */
 	memcpy(iid, id, 4);
 	memset(iid + 3, 0, NCPS - 3);
-	
+
 	/*
 	 * If the first token is an
 	 * id and not an operation code,
@@ -152,7 +168,7 @@ loop:
 	 */
 
 	/* Check for .equ forms */
-	if ((sp = lookup(id, phash, 0)) == NULL && 
+	if ((sp = lookup(id, phash, 0)) == NULL &&
 		(sp = lookup(iid, phash, 0)) == NULL) {
 		getid(id1, c);
 		if ((sp1=lookup(id1, phash, 0)) == NULL
@@ -205,6 +221,17 @@ loop:
 		break;
 
 	case TDEFW:
+		byteptr(0);
+		do {
+			getaddr(&a1);
+			istuser(&a1);
+			outraw(&a1);
+		} while ((c=getnb()) == ',');
+		unget(c);
+		break;
+
+	case TBPTR:
+		byteptr(1);
 		do {
 			getaddr(&a1);
 			istuser(&a1);
@@ -319,18 +346,21 @@ loop:
 				aerr(BAD_PCREL);
 			if (a1.a_segment != ABSOLUTE)
 				a1.a_type |= TPCREL;
-			a1.a_value -= dot[segment] / 2;
+			a1.a_value -= dot[segment];
 		}
 		/* Insert the accumulators */
 		opcode |= (acd << 13);
 		opcode |= (acs << 8);
 		if (indirect)
 			opcode |= 0x0400;
+
+		byteptr(0);
+
+		outab(opcode >> 8);
 		if (acs)
 			outrabrel(&a1);	/* Signed */
 		else
 			outrab(&a1);	/* Unsigned */
-		outab(opcode >> 8);
 		break;
 	}
 
@@ -395,7 +425,7 @@ loop:
 		if (c == ',')
 			acs = accumulator();
 		else {
-			acs = 0;	 
+			acs = 0;
 			unget(c);
 		}
 		/* ,0 means zero page */
@@ -414,17 +444,20 @@ loop:
 				aerr(BAD_PCREL);
 			if (a1.a_segment != ABSOLUTE)
 				a1.a_type |= TPCREL;
-			a1.a_value -= dot[segment] / 2;
+			a1.a_value -= dot[segment];
 		}
 		/* Insert the accumulators */
 		opcode |= (acs << 8);
 		if (indirect)
 			opcode |= 0x0400;
+
+		byteptr(0);
+
+		outab(opcode >> 8);
 		if (acs)
 			outrabrel(&a1);	/* Signed */
 		else if (acs == 0)
 			outrab(&a1);	/* Unsigned */
-		outab(opcode >> 8);
 		break;
 	}
 
@@ -525,7 +558,7 @@ loop:
 
 	case TTRAP:
 		acs = accumulator();
-		comma();		
+		comma();
 		acd = accumulator();
 		comma();
 		getaddr(&a1);

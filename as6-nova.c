@@ -46,6 +46,8 @@ SYM	sym[] = {
 	{	0,	".literal",	TSEGMENT,	LITERAL	},
 	{	0,	".commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	".buffers",	TSEGMENT,	BUFFERS	},
+
+	{	0,	".byteptr",	TBPTR,		0	},
 	
 	{	0,	"jmp",		TMEMNA,		0x0000  },
 	{	0,	"jsr",		TMEMNA,		0x0800  },
