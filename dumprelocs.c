@@ -248,6 +248,23 @@ static int dump_data(const char *p, int seg, int fd)
             reloc_end();
             continue;
         }
+        if (c == REL_MOD) {
+            unsigned m;
+            c = nextbyte(fd);
+            m = (1UL << (c & 0x1F)) - 1;
+            if (c & 0x80)
+                m = ~m;
+            printf("MOD mask %04X ", m & 0xFFFF);
+            if (c & 0x40)
+                printf("(check) ");
+            c = nextbyte(fd);
+            if (c & 0x80)
+                c = -(c & 0x0F);
+            else
+                c = (c & 0x0F);
+            printf("shift %d\n", c);
+            continue;
+        }
         high = 0;
         if (c == REL_PCR) {
             reloc_tag("P");
