@@ -157,7 +157,7 @@ static unsigned io_get(unsigned block)
 		perror("lseek");
 		exit(err | 1);
 	}
-//	printf("io_get: seek to %lx\n", (off_t)(block << 9));
+/*	printf("io_get: seek to %lx\n", (off_t)(block << 9)); */
 	ioblock = block;
 	iolen = read(iofd, iobuf, 512);
 	if (iolen == -1) {
@@ -191,9 +191,9 @@ static off_t io_getpos(void)
 
 static int io_read(void *bufp, unsigned len)
 {
-	unsigned left = iolen - iopos;
-	uint8_t *buf = bufp;
-	unsigned n;
+	register unsigned left = iolen - iopos;
+	register uint8_t *buf = bufp;
+	register unsigned n;
 	unsigned bytes = 0;
 
 	while(len) {
@@ -317,13 +317,13 @@ static unsigned target_has_regzp(void)
  */
 static struct object *new_object(void)
 {
-	struct object *o = xmalloc(sizeof(struct object));
+	register struct object *o = xmalloc(sizeof(struct object));
 	o->next = NULL;
 	o->syment = NULL;
 	return o;
 }
 
-static void insert_object(struct object *o)
+static void insert_object(register struct object *o)
 {
 	if (otail)
 		otail->next = o;
@@ -332,7 +332,7 @@ static void insert_object(struct object *o)
 	otail = o;
 }
 
-static void free_object(struct object *o)
+static void free_object(register struct object *o)
 {
 	if (o->syment)
 		free(o->syment);
@@ -347,7 +347,7 @@ static void free_object(struct object *o)
  */
 struct symbol *new_symbol(const char *name, int hash)
 {
-	struct symbol *s = xmalloc(sizeof(struct symbol));
+	register struct symbol *s = xmalloc(sizeof(struct symbol));
 	strncpy(s->name, name, NAMELEN);
 	s->next = symhash[hash];
 	symhash[hash] = s;
@@ -359,9 +359,9 @@ struct symbol *new_symbol(const char *name, int hash)
 /*
  *	Find a symbol in a given has table
  */
-struct symbol *find_symbol(const char *name, int hash)
+struct symbol *find_symbol(register const char *name, int hash)
 {
-	struct symbol *s = symhash[hash];
+	register struct symbol *s = symhash[hash];
 	while (s) {
 		if (strncmp(s->name, name, NAMELEN) == 0)
 			return s;
@@ -374,10 +374,10 @@ struct symbol *find_symbol(const char *name, int hash)
  *	A simple but adequate hashing algorithm. A better one would
  *	be worth it for performance.
  */
-static uint8_t hash_symbol(const char *name)
+static uint8_t hash_symbol(register const char *name)
 {
-	int hash = 0;
-	uint8_t n = 0;
+	register int hash = 0;
+	register uint8_t n = 0;
 
 	while(*name && n++ < NAMELEN)
 		hash += *name++;
@@ -402,10 +402,10 @@ static int is_undefined(const char *name)
 /*
  *	Check that two versions of a symbol are compatible.
  */
-static void segment_mismatch(struct symbol *s, uint8_t type2)
+static void segment_mismatch(register struct symbol *s, uint8_t type2)
 {
-	uint8_t seg1 = s->type & S_SEGMENT;
-	uint8_t seg2 = type2 & S_SEGMENT;
+	register uint8_t seg1 = s->type & S_SEGMENT;
+	register uint8_t seg2 = type2 & S_SEGMENT;
 
 	/* Matching */
 	if (seg1 == seg2)
@@ -435,7 +435,7 @@ static void segment_mismatch(struct symbol *s, uint8_t type2)
 static struct symbol *find_alloc_symbol(struct object *o, uint8_t type, const char *id, uint16_t value)
 {
 	uint8_t hash = hash_symbol(id);
-	struct symbol *s = find_symbol(id, hash);
+	register struct symbol *s = find_symbol(id, hash);
 
 	if (s == NULL) {
 		s = new_symbol(id, hash);
@@ -493,8 +493,8 @@ static void insert_internal_symbol(const char *name, int seg, uint16_t val)
 static void renumber_symbols(void)
 {
 	static int sym = 0;
-	struct symbol *s;
-	int i;
+	register struct symbol *s;
+	register int i;
 	for (i = 0; i < NHASH; i++)
 		for (s = symhash[i]; s != NULL; s=s->next)
 			if (s->type & (S_PUBLIC|S_UNKNOWN))
@@ -504,8 +504,8 @@ static void renumber_symbols(void)
 /* Write the symbols to the output file */
 static void write_symbols(FILE *fp)
 {
-	struct symbol *s;
-	int i;
+	register struct symbol *s;
+	register int i;
 	for (i = 0; i < NHASH; i++) {
 		for (s = symhash[i]; s != NULL; s=s->next) {
 			fputc(s->type, fp);
@@ -523,7 +523,7 @@ static void write_symbols(FILE *fp)
 /*
  *	Print a symbol for the map file
  */
-static void print_symbol(struct symbol *s, FILE *fp)
+static void print_symbol(register struct symbol *s, FILE *fp)
 {
 	char c;
 	if (s->type & S_UNKNOWN)
@@ -542,8 +542,8 @@ static void print_symbol(struct symbol *s, FILE *fp)
 
 static void write_map_file(FILE *fp)
 {
-	struct symbol *s;
-	int i;
+	register struct symbol *s;
+	register int i;
 	for (i = 0; i < NHASH; i++) {
 		for (s = symhash[i]; s != NULL; s=s->next)
 			print_symbol(s, fp);
@@ -555,7 +555,7 @@ static void write_map_file(FILE *fp)
  *	as the existing one. Also check for big endian as we don't yet
  *	support that (although we are close).
  */
-static void compatible_obj(struct objhdr *oh)
+static void compatible_obj(register struct objhdr *oh)
 {
 	if (obj_flags != -1 && oh->o_flags != obj_flags) {
 		fprintf(stderr, "Mixed object types not supported.\n");
@@ -571,7 +571,7 @@ static void compatible_obj(struct objhdr *oh)
 
 static int have_object(off_t pos, const char *name)
 {
-	struct object *o = objects;
+	register struct object *o = objects;
 	while(o) {
 		if (o->off == pos && strcmp(name, o->path) == 0)
 			return 1;
@@ -580,14 +580,14 @@ static int have_object(off_t pos, const char *name)
 	return 0;
 }
 
-static unsigned get_object(struct object *o)
+static unsigned get_object(register struct object *o)
 {
 	o->oh = xmalloc(sizeof(struct objhdr));
 	io_lseek(o->off);
 	return io_read(o->oh, sizeof(struct objhdr));
 }
 
-static void put_object(struct object *o)
+static void put_object(register struct object *o)
 {
 	if (o->oh)
 		free(o->oh);
@@ -615,10 +615,10 @@ static void openobject(struct object *o)
  */
 static struct object *load_object(off_t off, int lib, const char *path)
 {
-	int i;
+	register int i;
 	uint8_t type;
 	char name[NAMELEN + 1];
-	struct object *o = new_object();
+	register struct object *o = new_object();
 	struct symbol **sp;
 	int nsym;
 	uint16_t value;
@@ -711,9 +711,9 @@ static char segnames[] = "CDBZXSLsb";
 
 static void order_segments(void)
 {
-	const char *s = segmentorder;
-	unsigned last = 0xFF;
-	unsigned n;
+	register const char *s = segmentorder;
+	register unsigned last = 0xFF;
+	register unsigned n;
 
 	while(*s) {
 		char *p = strchr(segnames, *s);
@@ -739,9 +739,9 @@ static void order_segments(void)
  */
 static void set_segment_bases(void)
 {
-	struct object *o;
+	register struct object *o;
 	uint16_t pos[OSEG];
-	int i;
+	register int i;
 
 	/* We are doing a simple model here without split I/D for now */
 	for (i = 1; i < OSEG; i++)
@@ -939,10 +939,10 @@ static unsigned is_code(unsigned seg)
  */
 static void relocate_stream(struct object *o, int segment, FILE * op)
 {
-	uint8_t size;
+	register uint8_t size;
 	uint8_t code;
-	uint16_t r;
-	struct symbol *s;
+	register uint16_t r;
+	register struct symbol *s;
 	uint8_t tmp;
 	uint8_t seg;
 
@@ -1011,12 +1011,12 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				fputc(tmp, op);
 				continue;
 			}
-			rel_mask = (1 << (tmp & 0x0F)) - 1;
+			rel_mask = (1UL << (tmp & 0x1F)) - 1;
 			if (tmp & 0x80)
 				rel_mask = ~rel_mask;
 			rel_check = tmp & 0x40;
 			io_readb(&tmp);
-			rel_shift = tmp & 0x1F;
+			rel_shift = tmp & 0x0F;
 			if (tmp & 0x80)
 				rel_shift = -rel_shift;
 			continue;
@@ -1135,7 +1135,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				if (r >= o->nsym)
 					error("invalid reloc sym");
 				s = o->syment[r];
-//				fprintf(stderr, "relocating sym %d (%s : %x)\n", r, s->name, s->type);
+/*				fprintf(stderr, "relocating sym %d (%s : %x)\n", r, s->name, s->type); */
 				if (s->type & S_UNKNOWN) {
 					if (ldmode != LD_RFLAG) {
 						if (processing)
@@ -1230,7 +1230,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
  */
 static void write_stream(FILE * op, int seg)
 {
-	struct object *o = objects;
+	register struct object *o = objects;
 
 	while (o != NULL) {
 		openobject(o);	/* So we can hide library gloop */
@@ -1279,7 +1279,7 @@ static void write_stream(FILE * op, int seg)
 static void write_binary(FILE * op, FILE *mp)
 {
 	static struct objhdr hdr;
-	uint8_t i;
+	register uint_fast8_t i;
 
 	hdr.o_arch = arch;
 	hdr.o_cpuflags = arch_flags;
