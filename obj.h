@@ -130,12 +130,12 @@ struct objhdr
 /* Followed by
    7: highbit (set if mask is high bits used)
    6: error if cannot resolve
-   5-0: mask number of bits 0-63 - 0 no mask
+   5-0: mask number of bits 0-63 - 16 is no mask (FFFF)
 
    byte 2 (bits 5-3 0 for now)
    7: scale direction
    6: error if cannot resolve
-   2-0: scale (1,2,4,8)
+   5-0: shift for scale
 
    (proposed - see doc)
  */

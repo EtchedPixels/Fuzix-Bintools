@@ -95,6 +95,10 @@ static unsigned progress;		/* Did we make forward progress ?
 					   Used while library linking */
 static const char *segmentorder = "CLDBX";	/* Segment default order */
 
+static int_fast8_t rel_shift = 0;	/* Relocation scaling */
+static uint16_t rel_mask = 0xFFFF;	/* Relocation mask */
+static uint_fast8_t rel_check = 0;	/* Check fits mask */
+
 static FILE *relocf;
 
 /*
@@ -162,7 +166,7 @@ static unsigned io_get(unsigned block)
 	}
 	iopos = 0;
 	ioptr = iobuf;
-/* 	printf("io_get read block %d iolen now %d\n", block, iolen); */
+/*	printf("io_get read block %d iolen now %d\n", block, iolen); */
 	return iolen;
 }
 
@@ -194,7 +198,7 @@ static int io_read(void *bufp, unsigned len)
 
 	while(len) {
 /*		printf("len %d, left %d, ptr %p, iopos %d iolen %d\n",
-			len, left, ioptr, iopos, iolen); 
+			len, left, ioptr, iopos, iolen);
 		if (ioptr != iobuf + iopos) {
 			fprintf(stderr, "Botch %p %p\n",
 				ioptr, iobuf + iopos);
@@ -353,7 +357,7 @@ struct symbol *new_symbol(const char *name, int hash)
 }
 
 /*
- *	Find a symbol in a given has table	
+ *	Find a symbol in a given has table
  */
 struct symbol *find_symbol(const char *name, int hash)
 {
@@ -977,7 +981,6 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 			dot++;
 			continue;
 		}
-
 		if (code == REL_ORG) {
 			if (ldmode != LD_ABSOLUTE) {
 				fprintf(stderr, "%s: absolute addressing requires '-b'.\n", o->path);
@@ -994,6 +997,28 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				xfseek(op, dot + 0x10000);
 			else
 				xfseek(op, dot);
+			continue;
+		}
+		/* Set the relocation scaling properties (this is sticky) */
+		if (code == REL_MOD) {
+			io_readb(&tmp);
+			/* Copy through but do not change properties or
+			   we will end up double scaling stuff via ld -r */
+			if (!rawstream) {
+				fputc(REL_ESC, op);
+				fputc(tmp, op);
+				io_readb(&tmp);
+				fputc(tmp, op);
+				continue;
+			}
+			rel_mask = (1 << (tmp & 0x0F)) - 1;
+			if (tmp & 0x80)
+				rel_mask = ~rel_mask;
+			rel_check = tmp & 0x40;
+			io_readb(&tmp);
+			rel_shift = tmp & 0x1F;
+			if (tmp & 0x80)
+				rel_shift = -rel_shift;
 			continue;
 		}
 #ifdef TARGET_RELOC
@@ -1045,6 +1070,15 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				r += o->base[seg];
 				/* r is now the abs address */
 				r -= dot;
+				if (rel_shift) {
+					if (rel_shift < 0)
+						r <<= -rel_shift;
+					else
+						r >>= rel_shift;
+				}
+				if (rel_check && (r & ~rel_mask))
+					error("relocation exceeds mask");
+				r &= rel_mask;
 				/* r is now relative to the address of the relocation */
 				if (high && rawstream) {
 					r >>= 8;
@@ -1058,7 +1092,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				/* Relocate the value versus the new segment base and offset of the
 				   object */
 				r = target_get(o, size);
-				//			fprintf(stderr, "Target is %x, Segment %d base is %x\n", 
+				//			fprintf(stderr, "Target is %x, Segment %d base is %x\n",
 				//				r, seg, o->base[seg]);
 				r += o->base[seg];
 				if (overflow && (r < o->base[seg] || (size == 1 && r > 255))) {
@@ -1066,6 +1100,15 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 					fprintf(stderr, "relocation failed at 0x%04X\n", dot);
 					warning("relocation exceeded");
 				}
+				if (rel_shift) {
+					if (rel_shift < 0)
+						r <<= -rel_shift;
+					else
+						r >>= rel_shift;
+				}
+				if (rel_check && (r & ~rel_mask))
+					error("relocation exceeds mask");
+				r &= rel_mask;
 				/* A high relocation had a 16bit input value we relocate versus
 				   the base then chop down */
 				if (high && rawstream) {
@@ -1125,15 +1168,31 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 					r += s->value;
 					if (optype == REL_PCREL) {
 						int16_t off = r;
-						if (obj_flags & OF_WORDMACHINE)
-							off -= dot / 2;
-						else
-							off -= dot;
+						off -= dot;
+						if (rel_shift) {
+							if (rel_shift < 0)
+								off <<= -rel_shift;
+							else
+								off >>= rel_shift;
+						}
+/* FIXME - signed handling needed		if (rel_check && (off & ~rel_mask))
+							error("relocation exceeds mask");
+*/
+						off &= rel_mask;
 						if (overflow && size == 1 && (off < -128 || off > 127))
 							error("byte relocation exceeded");
 						r = (uint16_t)off;
 					} else {
 						/* Check again */
+						if (rel_shift) {
+							if (rel_shift < 0)
+								r <<= -rel_shift;
+							else
+								r >>= rel_shift;
+						}
+						if (rel_check && (r & ~rel_mask))
+							error("relocation exceeds mask");
+						r &= rel_mask;
 						if (overflow && (r < s->value || (size == 1 && r > 255))) {
 							fprintf(stderr, "width %d relocation offset %d, %d, %d does not fit.\n", size, r-s->value, s->value, r);
 							error("relocation exceeded");
@@ -1185,7 +1244,7 @@ static void write_stream(FILE * op, int seg)
 		dot = o->base[seg];
 		/* For Fuzix we place segments in absolute space but don't
 		   bother writing out the empty page before */
-		if (ldmode == LD_FUZIX) 
+		if (ldmode == LD_FUZIX)
 			xfseek(op, dot - base[1]);
 		/* In absolute mode we place segments wherever they should
 		   be in the binary space */
@@ -1280,7 +1339,7 @@ static void write_binary(FILE * op, FILE *mp)
 	hdr.o_magic = MAGIC_OBJ;
 	/* TODO: needs a special pass
 	if (dbgsyms )
-		copy_debug_all(op, mp);*/ 
+		copy_debug_all(op, mp);*/
 	if (err == 0) {
 		if (!rawstream) {
 			xfseek(op, 0);
