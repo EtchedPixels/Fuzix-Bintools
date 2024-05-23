@@ -103,6 +103,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TNEXT	0x2800			/* Z80N nextreg forms */
 #define TIMMED8N 0x2900			/* TIMMED8 Next only */
 #define TBS2	0x2A00			/* Barrel shifts DE,B */
+#define TBPTR	0x2B00			/* BCPL/B pointer */
 
 /*
  * Registers.
@@ -585,6 +586,7 @@ typedef	uint32_t	VALUE;		/* For symbol values */
 #define TTRAP	0x1900
 #define TMEMNA	0x1A00
 #define TBPTR	0x1B00			/* Nova byteptr */
+#define TNIO	0x1C00			/* NIO instruction */
 
 #define TPCREL	0x0010
 

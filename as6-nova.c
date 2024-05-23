@@ -64,7 +64,8 @@ SYM	sym[] = {
 	{	0,	"add",		TALU,		0x8600  },
 	{	0,	"and",		TALU,		0x8700	},
 	{	0,	"inc",		TALU,		0x8300  },
-	
+
+	{	0,	"nio",		TNIO,		0x6000	},
 	{	0,	"dia",		TIO,		0x6100	},
 	{	0,	"doa",		TIO,		0x6200	},
 	{	0,	"dib",		TIO,		0x6300	},

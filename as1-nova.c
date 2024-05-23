@@ -505,6 +505,7 @@ loop:
 		break;
 	}
 
+
 	case TIO:
 		p = id + 3;
 		if (*p == 's')
@@ -521,11 +522,22 @@ loop:
 		istuser(&a1);
 		if (a1.a_value > 63)
 			err('d', BADDEVICE);
-		opcode |= (acs << 1);
+		opcode |= (acs << 11);
 		opcode |= a1.a_value;
 		outaw(opcode);
 		break;
 
+	case TNIO:
+		p = id + 3;
+		if (*p == 's')
+			opcode |= 1 << 6;
+		else if (*p == 'c')
+			opcode |= 2 << 6;
+		else if (*p == 'p')
+			opcode |= 3 << 6;
+		else if (*p)
+			aerr(SYNTAX_ERROR);
+		/* Fall through */
 	case TDEV:
 		/* SKP is ambiguous so we list the four forms directly
 		   in the table to avoid this */
