@@ -324,6 +324,18 @@ loop:
 		cputype = opcode;
 		break;
 
+	case TBPTR:
+		/* BCPL or B word pointer */
+		outscale(1, 16);
+		do {
+			getaddr(&a1);
+			istuser(&a1);
+			outraw(&a1);
+		} while ((c=getnb()) == ',');
+		outscale(0, 16);
+		unget(c);
+		break;
+
 	case TNOPN:
 		require_z80n();
 		outab(opcode >> 8);

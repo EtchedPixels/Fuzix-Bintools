@@ -78,6 +78,7 @@ SYM	sym[] = {
 	{	0,	".z280"	,	TSETCPU,	CPU_Z280	},
 	{	0,	".z80n"	,	TSETCPU,	CPU_Z80N	},
 	{	0,	".ez80"	,	TSETCPU,	CPU_EZ80	},
+	{	0,	".bptr",	TBPTR,		XXXX	},
 	{	0,	"nop",		TNOP,		0x0000	},
 	{	0,	"rlca",		TNOP,		0x0007	},
 	{	0,	"rrca",		TNOP,		0x000F	},
