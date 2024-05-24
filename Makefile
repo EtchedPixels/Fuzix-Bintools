@@ -365,7 +365,7 @@ clean:
 # FIXME: allow root specification
 
 install: all
-	mkdir -p /opt/fcc/bin
+	mkdir -p $(CCROOT)/bin
 	cp as1802 ld1802 nm1802 osize1802 dumprelocs1802 $(CCROOT)/bin
 	cp as6502 ld6502 nm6502 osize6502 dumprelocs6502 $(CCROOT)/bin
 	cp as6800 ld6800 nm6800 osize6800 dumprelocs6800 $(CCROOT)/bin
@@ -385,7 +385,7 @@ install: all
 	cp template $(CCROOT)/bin/template
 
 installtest: test
-	mkdir -p /opt/fcc/bin
+	mkdir -p $(CCROOT)/bin
 	cp as316 ld316 nm316 osize316 dumprelocs316 $(CCROOT)/bin
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
