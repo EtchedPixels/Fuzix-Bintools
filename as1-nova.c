@@ -229,6 +229,9 @@ loop:
 		do {
 			getaddr(&a1);
 			istuser(&a1);
+			/* FIXME: how to integrate word machines into core nicely */
+			if (a1.a_segment == ABSOLUTE)
+				a1.a_value *= 2;
 			outraw(&a1);
 		} while ((c=getnb()) == ',');
 		unget(c);
@@ -351,13 +354,14 @@ loop:
 			if (a1.a_segment != ABSOLUTE) {
 				a1.a_type |= TPCREL;
 				a1.a_value -= dot[segment];
-			} else {
-				/* Turn into byte form temporarily */
-				a1.a_value <<= 1;
 			}
 		}
+		/* Need to push this into the core somehow */
+		if (a1.a_segment == ABSOLUTE)
+			/* Turn into byte form temporarily */
+			a1.a_value <<= 1;
 		/* Insert the accumulators */
-		opcode |= (acd << 13);
+		opcode |= (acd << 11);
 		opcode |= (acs << 8);
 		if (indirect)
 			opcode |= 0x0400;
@@ -453,11 +457,11 @@ loop:
 			if (a1.a_segment != ABSOLUTE) {
 				a1.a_type |= TPCREL;
 				a1.a_value -= dot[segment];
-			} else {
-				/* Turn into byte form temporarily */
-				a1.a_value <<= 1;
 			}
 		}
+		if (a1.a_segment == ABSOLUTE)
+			/* Turn into byte form temporarily */
+			a1.a_value <<= 1;
 		/* Insert the accumulators */
 		opcode |= (acs << 8);
 		if (indirect)
