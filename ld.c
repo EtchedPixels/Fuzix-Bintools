@@ -945,6 +945,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 	register struct symbol *s;
 	uint8_t tmp;
 	uint8_t seg;
+	uint16_t sv;
 
 	processing = o;
 
@@ -1165,7 +1166,8 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 					r = target_get(o, optype == REL_PCREL ? 2 : size);
 					/* Add the offset from the output segment base to the
 					   symbol */
-					r += s->value;
+					sv = s->value;
+					r += sv;
 					if (optype == REL_PCREL) {
 						int16_t off = r;
 						off -= dot;
@@ -1185,15 +1187,19 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 					} else {
 						/* Check again */
 						if (rel_shift) {
-							if (rel_shift < 0)
+							if (rel_shift < 0) {
 								r <<= -rel_shift;
-							else
+								sv <<= -rel_shift;
+							} else {
 								r >>= rel_shift;
+								sv >>= rel_shift;
+							}
 						}
+						/* This needs sign extending on mask for check */
 						if (rel_check && (r & ~rel_mask))
 							error("relocation exceeds mask");
 						r &= rel_mask;
-						if (overflow && (r < s->value || (size == 1 && r > 255))) {
+						if (overflow && (r < sv || (size == 1 && r > 255))) {
 							fprintf(stderr, "width %d relocation offset %d, %d, %d does not fit.\n", size, r-s->value, s->value, r);
 							error("relocation exceeded");
 						}
