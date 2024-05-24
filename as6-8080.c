@@ -58,6 +58,7 @@ SYM	sym[] = {
 	{	0,	".commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	".buffers",	TSEGMENT,	BUFFERS	},
 	{	0,	".setcpu",	TSETCPU,	XXXX	},
+	{	0,	".bptr",	TBPTR,		XXXX	},
 	/* First quadrant, various miscellaneous groupings with 3 bit
 	   register encoding */
 	{	0,	"nop",		TIMPL,		0x0000	},

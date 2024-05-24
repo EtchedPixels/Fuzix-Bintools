@@ -347,6 +347,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TREG16_I16 0x1D00			/* reg,constant - mvi etc */
 #define	TREG8H	0x1E00			/* 8bit register bits 5-3 (inc/dec) */
 #define TREG16BD 0x1F00			/* stax/ldax */
+#define TBPTR	0x2000			/* BCPL / B word pointer */
 
 /*
  * Registers.

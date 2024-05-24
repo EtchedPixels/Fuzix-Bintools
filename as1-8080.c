@@ -242,6 +242,18 @@ loop:
 		cputype = a1.a_value;
 		break;
 
+	case TBPTR:
+		outscale(1,16);
+		do {
+			getaddr(&a1);
+			constify(&a1);
+			istuser(&a1);
+			outraw(&a1);
+		} while ((c=getnb()) == ',');
+		outscale(0,16);
+		unget(c);
+		break;
+
 	case TIMPL85:
 		require_8085();
 		/* Fall through */
