@@ -38,6 +38,7 @@ void byteptr(unsigned n)
  * Exits directly to "qerr" if
  * there is no address field or
  * if the syntax is bad.
+ * TODO: FIXME - who owns decoding indirect and passing it around
  */
 void getaddr(ADDR *ap)
 {
@@ -46,6 +47,8 @@ void getaddr(ADDR *ap)
 	ap->a_sym = NULL;
 	ap->a_flags = 0;
 	ap->a_type = 0;
+	ap->a_value = 0;
+	ap->a_segment = ABSOLUTE;
 
 	/* We only have one addressing format we ever use.. an address.
 	   Quite how we encode it is another saga because our memory ops
@@ -101,12 +104,13 @@ static int postop(char c)
 
 /*
  *	Word sized binary output
+ *	We write machine words in network order
  */
 
 void outaw(uint16_t v)
 {
-	outab(v);
 	outab(v >> 8);
+	outab(v);
 }
 
 /*
@@ -344,9 +348,13 @@ loop:
 				a1.a_segment = segment;
 			else if (a1.a_segment != ABSOLUTE && a1.a_segment != segment)
 				aerr(BAD_PCREL);
-			if (a1.a_segment != ABSOLUTE)
+			if (a1.a_segment != ABSOLUTE) {
 				a1.a_type |= TPCREL;
-			a1.a_value -= dot[segment];
+				a1.a_value -= dot[segment];
+			} else {
+				/* Turn into byte form temporarily */
+				a1.a_value <<= 1;
+			}
 		}
 		/* Insert the accumulators */
 		opcode |= (acd << 13);
@@ -442,9 +450,13 @@ loop:
 				a1.a_segment = segment;
 			else if (a1.a_segment != ABSOLUTE && a1.a_segment != segment)
 				aerr(BAD_PCREL);
-			if (a1.a_segment != ABSOLUTE)
+			if (a1.a_segment != ABSOLUTE) {
 				a1.a_type |= TPCREL;
-			a1.a_value -= dot[segment];
+				a1.a_value -= dot[segment];
+			} else {
+				/* Turn into byte form temporarily */
+				a1.a_value <<= 1;
+			}
 		}
 		/* Insert the accumulators */
 		opcode |= (acs << 8);
