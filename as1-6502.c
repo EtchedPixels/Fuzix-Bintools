@@ -22,6 +22,10 @@ int passbegin(int pass)
 	return 1;
 }
 
+void doflush(void)
+{
+}
+
 static void setnextrel(int flag)
 {
 	if (nextrel == 8 * sizeof(reltab))

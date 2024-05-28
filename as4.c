@@ -487,6 +487,9 @@ void outeof(void)
 	if (noobj || pass < 3)
 		return;
 
+	/* Target specifc flush of anything pending */
+	doflush();
+
 	dumpseginfo();
 	for (i = 0; i < OSEG; i++) {
 		/* The BSS is not written out */

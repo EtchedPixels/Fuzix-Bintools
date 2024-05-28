@@ -15,6 +15,10 @@ int passbegin(int pass)
 	return 1;		/* All passes required */
 }
 
+void doflush(void)
+{
+}
+
 /*
  *	Make constant
  */

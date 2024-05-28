@@ -2,6 +2,10 @@
  * DG Nova assembler.
  * Assemble one line of input.
  * Knows all the dirt.
+ *
+ * TODO: Add support to the core as code to error attempts to shift a pointer
+ * and lose bits (eg if you attempt to make a word pointer of a byte aligned
+ * object).
  */
 #include	"as.h"
 
@@ -103,12 +107,38 @@ static int postop(char c)
 }
 
 /*
+ *	Byte handling. We queue bytes into pairs then add them. If we
+ *	write a word then outaw flushes any dangling byte into the left
+ *	half of the word.
+ */
+
+void flushbyte(void)
+{
+	if (dot[segment] & 1)
+		outab(0);
+}
+
+/*
+ *	Flush any final byte in case we end with an odd sized
+ *	segment.
+ */
+
+void doflush(void)
+{
+	for (segment = 1; segment < OSEG; segment++)
+		flushbyte();
+}
+
+
+/*
  *	Word sized binary output
  *	We write machine words in network order
  */
 
 void outaw(uint16_t v)
 {
+	/* Flush pending byte and align */
+	flushbyte();
 	outab(v >> 8);
 	outab(v);
 }
@@ -142,6 +172,8 @@ loop:
 	getid(id, c);
 	if ((c=getnb()) == ':') {
 		sp = lookup(id, uhash, 1);
+		/* We don't allow pointers to non word for now TODO */
+		flushbyte();
 		if (pass == 0) {
 			if ((sp->s_type&TMMODE) != TNEW
 			&&  (sp->s_type&TMASG) == 0)
@@ -204,6 +236,7 @@ loop:
 		istuser(&a1);
 		if (a1.a_segment != ABSOLUTE)
 			qerr(MUST_BE_ABSOLUTE);
+		flushbyte();	/* Deposit any dangling byte first */
 		outsegment(ABSOLUTE);
 		dot[segment] = a1.a_value * 2;	/* dot is in bytes */
 		/* Tell the binary generator we've got a new absolute
@@ -218,13 +251,27 @@ loop:
 		break;
 		/* .code etc */
 	case TSEGMENT:
-		segment = sp->s_value;
 		/* Tell the binary generator about a segment switch to a non
 		   absolute segnent */
+		flushbyte();
+		segment = sp->s_value;
 		outsegment(segment);
 		break;
 
+	case TDEFB:
+		do {
+			getaddr(&a1);
+			istuser(&a1);
+			/* FIXME: how to integrate word machines into core nicely */
+			if (a1.a_segment == ABSOLUTE)
+				a1.a_value *= 2;
+			outrab(&a1);
+		} while ((c=getnb()) == ',');
+		unget(c);
+		break;
+
 	case TDEFW:
+		flushbyte();
 		byteptr(0);
 		do {
 			getaddr(&a1);
@@ -238,6 +285,7 @@ loop:
 		break;
 
 	case TBPTR:
+		flushbyte();
 		byteptr(1);
 		do {
 			getaddr(&a1);
@@ -255,12 +303,10 @@ loop:
 				qerr(MISSING_DELIMITER);
 			outab(c);
 		}
-		/* Word machine - pad the end */
-		if (dot[segment] & 1)
-			dot[segment]++;
 		break;
 
 	case TDEFS:
+		flushbyte();
 		getaddr(&a1);
 		istuser(&a1);
 		/* Write out the words. The BSS will deal with the rest */
@@ -366,6 +412,8 @@ loop:
 		if (indirect)
 			opcode |= 0x0400;
 
+		flushbyte();
+
 		byteptr(0);
 
 		outab(opcode >> 8);
@@ -467,6 +515,7 @@ loop:
 		if (indirect)
 			opcode |= 0x0400;
 
+		flushbyte();
 		byteptr(0);
 
 		outab(opcode >> 8);
@@ -517,6 +566,7 @@ loop:
 		opcode |= (drop << 3);
 		if (skp)
 			opcode |= skp->s_value;
+		flushbyte();
 		outaw(opcode);
 		break;
 	}
@@ -540,6 +590,7 @@ loop:
 			err('d', BADDEVICE);
 		opcode |= (acs << 11);
 		opcode |= a1.a_value;
+		flushbyte();
 		outaw(opcode);
 		break;
 
@@ -562,16 +613,19 @@ loop:
 		if (a1.a_value > 63)
 			err('d', BADDEVICE);
 		opcode |= a1.a_value;
+		flushbyte();
 		outaw(opcode);
 		break;
 
 	case TAC:
 		acs = accumulator();
 		opcode |= (acs << 11);
+		flushbyte();
 		outaw(opcode);
 		break;
 
 	case TIMPL:
+		flushbyte();
 		outaw(opcode);
 		break;
 
@@ -581,6 +635,7 @@ loop:
 		acd = accumulator();
 		opcode |= (acd << 11);
 		opcode |= (acs << 6);
+		flushbyte();
 		outaw(opcode);
 		break;
 
@@ -595,6 +650,7 @@ loop:
 		opcode |= (acs << 15);
 		opcode |= (acd << 13);
 		opcode |= (a1.a_value << 4);
+		flushbyte();
 		outaw(opcode);
 		break;
 	default:

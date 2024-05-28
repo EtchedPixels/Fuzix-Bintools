@@ -17,6 +17,9 @@ int passbegin(int pass)
 	return 1;
 }
 
+void doflush(void)
+{
+}
 
 /*
  * Read in an address

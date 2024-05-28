@@ -2245,6 +2245,7 @@ extern	int	cpu_flags;
 extern int passbegin(int pass);
 extern void list_addbyte(uint8_t);
 extern void asmline(void);
+extern void doflush(void);
 extern void comma(void);
 extern void istuser(ADDR *);
 extern int symhash(char *);

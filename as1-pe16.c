@@ -14,6 +14,10 @@ int passbegin(int pass)
 	return 1;
 }
 
+void doflush(void)
+{
+}
+
 static void constify(ADDR *ap)
 {
 	if ((ap->a_type & TMMODE) == (TUSER|TMINDIR))
