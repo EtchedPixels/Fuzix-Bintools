@@ -616,7 +616,7 @@ loop:
 //				outsegment();
 				outab(0x87);
 				/* TODO: block xchg with immediate and some  others like that */
-				outmod(mod2, &a1);
+				outmod(mod2, &a2);
 				break;
 			}
 			if ((a1.a_type & TMMODE) == TBR) {
@@ -624,7 +624,7 @@ loop:
 //				outsegment();
 				outab(0x86);
 				/* TODO: block xchg with immediate and some  others like that */
-				outmod(mod2, &a1);
+				outmod(mod2, &a2);
 				break;
 			}
 		}
