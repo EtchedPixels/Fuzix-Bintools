@@ -276,9 +276,19 @@ char *etext[] = {
  */
 void isokaors(ADDR *ap, int paren)
 {
-	int mode;
+	unsigned mode;
+	unsigned reg = ap->a_type & TMREG;
 
 	mode = ap->a_type&TMMODE;
+	if (mode == TWR) {
+		switch(reg) {
+		case BX:
+		case BP:
+		case DI:
+		case SI:
+			return;
+		}
+	}
 	if (mode == TUSER)
 		return;
 	aerr(ADDR_REQUIRED);

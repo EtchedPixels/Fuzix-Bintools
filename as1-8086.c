@@ -115,7 +115,7 @@ void getaddr(ADDR *ap)
  */
 
 /* Registers within address specifications. Only BX BP SI DI */
-static unsigned get_reg(void)
+static int get_reg(void)
 {
 	/* Not quite right as it accepts  b x */
 	int c = getnb();
@@ -133,7 +133,7 @@ static unsigned get_reg(void)
 	}
 	unget(c2);
 	unget(c);
-	return 0;
+	return -1;
 }
 
 /* Turn a pair of reg names and a value into something */
@@ -154,7 +154,7 @@ static unsigned make_modrm(ADDR *ap, unsigned r1, unsigned r2)
 	} else if (r1 == BP) {
 		if (r2 == SI)
 			modrm = 2;
-		if (r2 == DI)
+		else if (r2 == DI)
 			modrm = 3;
 		else if (r2 == 0)
 			modrm = 6;
@@ -162,7 +162,7 @@ static unsigned make_modrm(ADDR *ap, unsigned r1, unsigned r2)
 			aerr(BADMODE);
 	} else if (r1 == SI)
 		modrm = 4;
-	else if (r1 == SI)
+	else if (r1 == DI)
 		modrm = 5;
 	else
 		aerr(BADMODE);
@@ -219,13 +219,13 @@ void getaddr_mem(ADDR *ap, unsigned *modrm)
 
 	/* Is it a register  ? */
 	r1 = get_reg();
-	if (r1 == 0) {
+	if (r1 == -1) {
 		/* Simple expression for the address */
 		expr1(ap, LOPRI, 0);
 		mod = 0x06;
 	} else {
 		c = getnb();
-		if (c == '+') {
+		if (c == '+' || c == '-') {
 			r2 = get_reg();
 			/* [ Reg + expr ] */
 			if (r2 == -1) {
