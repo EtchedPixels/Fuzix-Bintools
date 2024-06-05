@@ -95,9 +95,9 @@ static unsigned progress;		/* Did we make forward progress ?
 					   Used while library linking */
 static const char *segmentorder = "CLDBX";	/* Segment default order */
 
-static int_fast8_t rel_shift = 0;	/* Relocation scaling */
-static uint16_t rel_mask = 0xFFFF;	/* Relocation mask */
-static uint_fast8_t rel_check = 0;	/* Check fits mask */
+static int_fast8_t rel_shift;		/* Relocation scaling */
+static uint16_t rel_mask;		/* Relocation mask */
+static uint_fast8_t rel_check;		/* Check fits mask */
 
 static FILE *relocf;
 
@@ -1237,6 +1237,11 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 static void write_stream(FILE * op, int seg)
 {
 	register struct object *o = objects;
+
+	/* Start with clear defaults for each segment */
+	rel_shift = 0;
+	rel_mask = 0xFFFF;
+	rel_check = 0;
 
 	while (o != NULL) {
 		openobject(o);	/* So we can hide library gloop */
