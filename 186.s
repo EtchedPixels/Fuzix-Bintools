@@ -7,6 +7,29 @@
 	adc ax,1
 	adc bx,4
 	adc ax,bx
+	adc ax,[bx]
+	adc ax,[si]
+	adc ax,[di]
+	adc ax,[bx + di]
+	adc ax,[bx + si]
+	adc ax,[bp + di]
+	adc ax,[bp + si]
+	adc ax,[bp + 0]
+	adc ax,[bx + 1]
+	adc ax,[di + 2]
+	adc ax,[si + 3]
+	adc ax,[bx + di + 4]
+	adc ax,[bx + si + 5]
+	adc ax,[bp + di + 6]
+	adc ax,[bp + si + 7]
+	adc ax,[bp + 512]
+	adc ax,[bx + 513]
+	adc ax,[di + 514]
+	adc ax,[si + 515]
+	adc ax,[bx + di + 516]
+	adc ax,[bx + si + 517]
+	adc ax,[bp + di + 518]
+	adc ax,[bp + si + 519]
 	adc ax,[fred]
 	adc [fred],ax
 	adc [fred],1
@@ -137,7 +160,7 @@ foo:
 	mov [0x1234],al
 	mov bx,[0x1234]
 	mov [0x1234],bx
-;	mov [bp + 4], 12
+	mov [bp + 4], 12
 	mov ax,[bx]
 	mov [bx],ax
 	mov [bx],12
@@ -218,7 +241,7 @@ foo:
 	wait
 	xchg ax,bx
 	xchg al,bl
-	xchg ax,[_fred]
+	xchg ax,[_fred]		; fails phase error ??
 	xchg [_fred],ax
 	xlat
 	xor ax,1
