@@ -904,6 +904,10 @@ static void record_reloc(struct object *o, unsigned high, unsigned size, unsigne
 	if (!relocf)
 		return;
 
+	/* Absolutes are .. absolute */
+	if (seg == ABSOLUTE)
+		return;
+
 	if (size == 2 && !(o->oh->o_flags & OF_BIGENDIAN))
 		addr++;
 	if (seg == ZP) {
