@@ -77,7 +77,7 @@ Honeywell 316 and similar machines
 
 Motorola 6805 and 68HC08 (not 6808 - see 6800 for that)
 
-## 8060
+### 8060
 
 The INS8060 (SC/MP)
 
