@@ -85,6 +85,10 @@ The INS8060 (SC/MP)
 
 INS 8070
 
+### CP1600
+
+Initial testing code to do more on true word addressed machines.
+
 ### NOVA
 
 DG Nova series machines. Test case for word addressing support. Should now
