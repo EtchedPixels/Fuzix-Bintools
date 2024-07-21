@@ -21,7 +21,8 @@ test: as316 ld316 nm316 osize316 dumprelocs316 \
       as8086 ld8086 nm8086 osize8086 dumprelocs8086 \
       aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16
 
-todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
+todo: ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600 \
+      as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
       aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
 
 CCROOT ?=/opt/fcc/
@@ -217,6 +218,21 @@ osize9900: $(HDR) osize.c
 dumprelocs9900: $(HDR) dumprelocs.o
 	$(CC) $(CFLAGS) -o dumprelocs9900 dumprelocs.o
 
+ascp1600: $(HDR) $(CORE) as1-cp1600.c as6-cp1600.c
+	$(CC) $(CFLAGS)  -DTARGET_CP1600 -o ascp1600 $(CORE) as1-cp1600.c as6-cp1600.c
+
+ldcp1600: $(HDR) ld.c
+	$(CC) $(CFLAGS) -o ldcp1600 ld.c
+
+nmcp1600: $(HDR) nm.c
+	$(CC) $(CFLAGS) -o nmcp1600 nm.c
+
+osizecp1600: $(HDR) osize.c
+	$(CC) $(CFLAGS) -o osizecp1600 osize.c
+
+dumprelocscp1600: $(HDR) dumprelocs.o
+	$(CC) $(CFLAGS) -o dumprelocscp1600 dumprelocs.o
+
 asee200: $(HDR) $(CORE) as1-ee200.c as6-ee200.c
 	$(CC) $(CFLAGS)  -DTARGET_EE200 -o asee200 $(CORE) as1-ee200.c as6-ee200.c
 
@@ -351,6 +367,7 @@ clean:
 	rm -f as8080 ld8080 nm8080 osize8080 dumprelocs8080
 	rm -f as8086 ld8086 nm8086 osize8086 dumprelocs8086
 	rm -f as9900 ld9900 nm9900 osize9900 dumprelocs9900
+	rm -f ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600
 	rm -f asee200 ldee200 nmee200 osizeee200 dumprelocsee200
 	rm -f asgb ldgb nmgb osizegb dumprelocsgb
 	rm -f ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11
@@ -390,5 +407,6 @@ installtest: test
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
 	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
 	cp as8086 ld8086 nm8086 osize8086 dumprelocs8086 $(CCROOT)/bin
+	cp ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600 $(CCROOT)/bin
 	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
 #	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin
