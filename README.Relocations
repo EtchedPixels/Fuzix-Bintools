@@ -1,0 +1,178 @@
+Relocations are embedded in the binary data so that the linker can process
+large quantities of data streaming through memory.
+
+The following scheme is used
+
+Bytes are encoded literally except that 0xDA is an "escape" code.
+
+The byte following is
+
+If bit 7 set then
+
+	bits 5-4	Size in bytes 1-4 (encoded as 0-3)
+	bits 3-0	Segment number 0-15
+	
+	two bytes follow which give the offset relative to the segment start
+
+	Segment 15 (unknown) is not valid.
+
+If bit 7 is clear then bits 0-3 are the relocation type
+
+	0		Special (bits 6-4 indicate what)
+	1		Symbol
+	2		PC relative Symbol
+
+
+The special relocations (bit 7 clear bit 0-3 clear) are
+
+0x00	Quoted 0xDA
+0x10	EOF		End of this stream
+0x20	Overflow	Do not check this relocation for overflow
+0x30	High		Relocation for the high byte only (must follow
+			directly after overflow if both used)
+0x40	ORG		Change of address. Valid only in ABSOLUTE segment stream
+0x50	Modifier	(see below - not yet implemented in ld)
+0x60	Block		(Reserved for future automatic bank packing)
+0x70	PC rel		PC relative relocations that are not symbols
+
+Low byte only relocations of word sized objects are written as byte with
+overflow. There is currently no provision for 'high word' 'high byte' etc
+for 32bit relocations and 24/32bit is very much a TODO.
+
+0x50 is followed by 2 bytes (proposed)
+	byte 1:	bit 7 - set if mask is high bits, clear if low
+		bit 6 - set if a resolution that does not fit the mask
+			errors
+		bit 5-0: number of bits in mask (3-0 for 16bit) 
+	byte 2: bit 7 - scale up or down (set = scale down)
+		bit 6 - error if cannot scale
+		bit 5 - 0: scale factor (power of 2) (3-0 for 16bit)
+
+	It might also make sense to just make the mask a 32bit - TBD
+
+0x60	is followed by a byte length of the block. The block will not be
+	split between banks or internally padded. This will in future be
+	used for automatic bank allocation for banked/overlay code
+
+0x70	simple relocation is PC rel
+
+	The following simple relocation is resolved using the difference betwen
+	the current segment and address of the relocation and the
+	segment/address of the given relocation value
+
+	For example if the relocation value is 0xFFFE in data then the
+	resulting word is the offset from the byte after the relocation in
+	the current segment to the address in the data segment. This is used
+	for things like 6809 LDA FOO,PCR.
+
+The second special range is 1XXX1111 (the invalid segment cases)
+
+0x8F	Target specific
+0xFF	Reserved for extension space
+
+
+Specials must be ordered
+
+	PCR
+	OVERFLOW
+	HIGH
+	SIMPLE / Relocation type
+
+
+
+Target specific relocations at this point
+
+H316
+
+0xE0 00 	Literal value
+0xE0 01		Memory reference instruction follows. Combine with the
+		instruction
+0xE0 02		Ditto but is a STX/LDX
+0xE0 03		As 01 but in extended mode
+0xE0 10		Literals can be placed here
+
+We need to implement ** to mean yeah this is a MR but don't touch it
+
++4 for symbol
+
+Then either (symbol)
+	LL HH		symbol number
+	HH LL		offset
+then the source file value to relocate (offset, tag etc)
+
+Or
+	HH LL	literal value
+
+Or
+	0L	segment
+	HH LL	address + offset
+
+Symbols are resolved to a final address. If this address is in segment
+then it is resolved. If it is in segment 0 ditto. If not then it is queued
+as a literal reference
+
+Segment/address/offset are resolved identically to Symbols to give an
+address then decisions made
+
+Literals are checked against the segment literals already placed and seg0
+literals and if not present queued as literal reference
+
+The linker keeps a literal work table as it does this work and a literal
+value table.
+
+	addr to fixup	| 	value
+
+when 0xE 10 is found the assembler emits each literal that is queued and
+will fit within the segment. Each one is then fixed up in the output file
+(means a seek and seek back alas)
+
+If they do not fit they are added to the separate literal table in segment
+0 which runs from the size of the .dp page to 511.
+
+If both run out an error is produced
+
+
+8080/8085/Z80
+
+Banked call
+
+(Assumes banked compiler form places const in data area)
+
+0xE0 00 LL HH 	Symbol name
+
+0xE0 01 SEG 	Ditto but simple form for module segment
+
+Next 5 bytes are always PUSH AF CALL xxxx POP AF where xxxx is the offset
+
+Resolved either as
+
+	PUSH AF CALL xxxx POP AF	(same segment)
+
+Or if far
+
+	CALL __bank_a_b			a = this bank b = new bank
+					then looks up symbol for __bank_a_b
+					to resolve
+	.word XXXX			xxxx + symbol
+
+0xE0 02 LL HH	Symbol name
+
+Resolved as the address of a new or existing entry in the stub table produced
+by the linker on the end of the literals
+
+	LD DE,#symbol
+	JP __stub_a			a = bank of called fn
+
+0xE0 03 SEG
+
+Ditto but the address is otherwise simple (segment/addr)
+
+For now the stub table is allocated at the start of the literals
+
+Also need to place all const data into .data for banked
+
+
+
+
+
+
