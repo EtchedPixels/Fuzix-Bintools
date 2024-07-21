@@ -891,7 +891,7 @@ static void target_put(struct object *o, addr_t value, uint16_t size, FILE *op)
 {
 #ifdef ARCH32
 	if (o->oh->o_flags & OF_BIGENDIAN) {
-		unsigned rs = size * 8;
+		unsigned rs = (size - 1) * 8;
 		while(size--) {
 			target_pquoteb(value >> rs, op);
 			value <<= 8;
