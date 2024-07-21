@@ -154,6 +154,40 @@ static void outaddr(addr_t a, unsigned s)
 #endif
 }
 
+/* Ditto allowing for quoting changes */
+static void outqaddr(addr_t a, unsigned s)
+{
+#ifdef TARGET_BIGENDIAN
+	unsigned shift = 8 * (s - 1);
+	while(s--) {
+		outabyte(a >> shift);
+		a <<= 8;
+	}
+#else
+	while(s--) {
+		outabyte(a);
+		a >>= 8;
+	}
+#endif
+}
+
+static void outqcaddr(addr_t a, unsigned s)
+{
+#ifdef TARGET_BIGENDIAN
+	unsigned shift = 8 * (s - 1);
+	while(s--) {
+		outab2(a >> shift);
+		a <<= 8;
+	}
+	outab(a >> shift);
+#else
+	while(s--) {
+		outab2(a);
+		a >>= 8;
+	}
+#endif
+}
+
 /*
  *	Symbol numbers and relocations are always written little endian
  *	for simplicity.
@@ -220,21 +254,8 @@ static void outreloc(register ADDR *a, int bytes)
 			outbyte(n);
 			outabyte(n >> 8);
 #endif
-		} else {
-			if (bytes == 1)
-				/* abchk2 ? */
-				outabyte(n);
-			else {
-			/* FIXME: > 2 bytes */
-#ifdef TARGET_BIGENDIAN
-				outabyte(n >> 8);
-				outabyte(n);
-#else
-				outabyte(n);
-				outabyte(n >> 8);
-#endif
-			}
-		}
+		} else
+			outqaddr(n, bytes);
 	} else {
 		/* Relocatable constant. This may change and thus need
 		   to be padded */
@@ -248,7 +269,7 @@ static void outreloc(register ADDR *a, int bytes)
 			err('o', CONSTANT_RANGE);
 		n &= mask;
 
-		/* FIXME: need to deal with 24/32bit sizes */
+		/* FIXME: need to deal with 24/32bit sizes wit HIGH */
 		if (f & A_HIGH) {
 			outab2(n >> 8);
 		} else if (f & A_LOW) {
@@ -259,15 +280,8 @@ static void outreloc(register ADDR *a, int bytes)
 		} else {
 			if (bytes == 1)
 				outab(n);
-			else {
-#ifdef TARGET_BIGENDIAN
-				outab2(n >> 8);
-				outab2(n);
-#else
-				outab2(n);
-				outab2(n >> 8);
-#endif
-			}
+			else
+				outqcaddr(n, bytes);
 		}
 	}
 }
