@@ -1091,7 +1091,9 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				fputc(tmp, op);
 				continue;
 			}
-			/* FIXME: 32bit masks */
+			/* 0x1F is sufficient as for a 32bit full mask
+			   as 0x00 will give us a mask of 0 which inverted
+			   is 0xFFFFFFFF */
 			rel_mask = (1UL << (tmp & 0x1F)) - 1;
 			if (tmp & 0x80)
 				rel_mask = ~rel_mask;
