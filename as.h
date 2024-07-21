@@ -2360,7 +2360,7 @@ extern void expr2(ADDR *);
 extern void expr3(ADDR *, int);
 extern void isokaors(ADDR *, int);
 extern int outpass(void);
-extern void outabsolute(int);
+extern void outabsolute(addr_t);
 extern void outsegment(int);
 extern void outab(uint8_t);
 extern void outabyte(uint8_t);

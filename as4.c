@@ -11,13 +11,17 @@
 
 #include	"as.h"
 
-static uint16_t segsize[OSEG];
+static addr_t segsize[OSEG];
 static uint32_t truesize[OSEG];
 static off_t segbase[OSEG];
 static uint16_t segpad[OSEG];
 static uint8_t full[OSEG];	/* So we can tell a full wrap from a 0 start */
 
-static uint16_t mask = 0xFFFF;
+#ifdef ADDR32
+static addr_t mask = 0xFFFFFFFF;
+#else
+static addr_t mask = 0xFFFF;
+#endif
 static int_fast8_t shift = 0;
 static unsigned rel_check = 0;
 
@@ -92,15 +96,19 @@ int outpass(void)
  * Absolute address change
  */
 
-void outabsolute(int addr)
+void outabsolute(addr_t addr)
 {
 	if (segment != ABSOLUTE)
 		qerr(MUST_BE_ABSOLUTE);
 	else {
 		outbyte(REL_ESC);
 		outbyte(REL_ORG);
-		outbyte(addr & 0xFF);
+		outbyte(addr);
 		outbyte(addr >> 8);
+#ifdef ARCH32
+		outbyte(addr >> 16);
+		outbyte(addr >> 24);
+#endif
 	}
 }
 
@@ -127,6 +135,23 @@ static void check_store_allowed(uint8_t segment, uint16_t value)
 		return;
 	if (segment == BSS)
 		err('b', DATA_IN_BSS);
+}
+
+/* Write an address out according to size */
+static void outaddr(addr_t a, unsigned s)
+{
+#ifdef TARGET_BIGENDIAN
+	unsigned shift = 8 * (s - 1);
+	while(s--) {
+		outab(a >> shift);
+		a <<= 8;
+	}
+#else
+	while(s--) {
+		outab(a);
+		a >>= 8;
+	}
+#endif
 }
 
 /*
@@ -185,6 +210,7 @@ static void outreloc(register ADDR *a, int bytes)
 		if (f & A_LOW)
 			outabyte(n);
 		else if (f & A_HIGH) {
+			/* FIXME: > 2 bytes */
 #ifdef TARGET_BIGENDIAN
 			outabyte(n >> 8);
 			/* We need this to relocate but it is not really in
@@ -199,6 +225,7 @@ static void outreloc(register ADDR *a, int bytes)
 				/* abchk2 ? */
 				outabyte(n);
 			else {
+			/* FIXME: > 2 bytes */
 #ifdef TARGET_BIGENDIAN
 				outabyte(n >> 8);
 				outabyte(n);
@@ -221,6 +248,7 @@ static void outreloc(register ADDR *a, int bytes)
 			err('o', CONSTANT_RANGE);
 		n &= mask;
 
+		/* FIXME: need to deal with 24/32bit sizes */
 		if (f & A_HIGH) {
 			outab2(n >> 8);
 		} else if (f & A_LOW) {
@@ -367,22 +395,17 @@ void outrabrel(ADDR *a)
 	outab2(v);
 }
 
+/* Write a relative word. Need to genericise by size */
 void outrawrel(ADDR *a)
 {
-	uint16_t av = (int16_t)a->a_value;
+	addr_t av = (addr_t)a->a_value;
 	check_store_allowed(segment, 1);
 	if (a->a_sym) {
 		outbyte(REL_ESC);
 		outbyte((1 << 4 ) | REL_PCREL);
 		outbyte(a->a_sym->s_number & 0xFF);
 		outbyte(a->a_sym->s_number >> 8);
-#ifdef TARGET_BIGENDIAN
-		outabyte(av >> 8);
-		outabyte(av);
-#else
-		outabyte(av);
-		outabyte(av >> 8);
-#endif
+		outaddr(av, 2);
 		return;
 	} else if (segment == a->a_segment) {
 		/* We don't need to issue a relocation if it's within
@@ -397,24 +420,12 @@ void outrawrel(ADDR *a)
 		if (rel_check && (av & ~mask))
 			err('o', CONSTANT_RANGE);
 		av &= mask;
-#ifdef TARGET_BIGENDIAN
-		outab(av >> 8);
-		outab(av);
-#else
-		outab(av);
-		outab(av >> 8);
-#endif
+		outaddr(av, 2);
 	} else {
 		outbyte(REL_ESC);
 		outbyte(REL_PCR);
 		outbyte((1 << 4) | REL_SIMPLE | a->a_segment);
-#ifdef TARGET_BIGENDIAN
-		outabyte(av >> 8);
-		outabyte(av);
-#else
-		outabyte(av);
-		outabyte(av >> 8);
-#endif
+		outaddr(av, 2);
 	}
 }
 
@@ -433,6 +444,10 @@ static void putsymbol(SYM *s, FILE *ofp)
 	fwrite(s->s_id, NAMELEN, 1, ofp);
 	putc(s->s_value, ofp);
 	putc(s->s_value >> 8, ofp);
+#ifdef ARCH32
+	putc(s->s_value >> 16, ofp);
+	putc(s->s_value >> 24, ofp);
+#endif
 }
 
 static void enumerate(SYM *s, FILE *dummy)
