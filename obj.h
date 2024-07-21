@@ -156,8 +156,11 @@ struct objhdr
 #define REL_BLOCK	(REL_SPECIAL | (6 << 4)) /* 60 */
 /* Following simple relocation is ,PCR style (PC relative across segments) */
 #define REL_PCR		(REL_SPECIAL | (7 << 4)) /* 70 */
+
+#define REL_SPECIAL2	0x8F		/* 8F, 9F ... */
 /* Target specific */
-#define REL_TARGET	(REL_SPECIAL | (0xE << 4))	/* E0 */
+#define REL_TARGET	(REL_SPECIAL2))	/* 8F */
+#define REL_EXTEND	(REL_SPECIAL2 | 0x70)	/* Reserved FF */
 
 /* symbols and debug are in the format 
     uint8_t flags
