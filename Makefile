@@ -19,10 +19,10 @@ test: as316 ld316 nm316 osize316 dumprelocs316 \
       as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
       as8086 ld8086 nm8086 osize8086 dumprelocs8086 \
+      ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600 \
       aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16
 
-todo: ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600 \
-      as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
+todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
       aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
 
 CCROOT ?=/opt/fcc/
