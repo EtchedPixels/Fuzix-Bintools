@@ -1152,7 +1152,10 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				r = target_get(o, size);
 				r += o->base[seg];
 				/* r is now the abs address */
-				r -= dot;
+				if (o->oh->o_flags & OF_WORDMACHINE)
+					r -= dot/ 2;
+				else
+					r -= dot;
 				if (rel_shift) {
 					if (rel_shift < 0)
 						r <<= -rel_shift;
@@ -1195,8 +1198,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				if (rel_check && (r & ~rel_mask))
 					error("relocation exceeds mask");
 				r &= rel_mask;
-				/* TODO: decide what if anything we do with HIGH/LOW versus shift/mask
-				   for 32bit */
+				/* REL_HIGH is only defined for 8/16bit addresses */
 				/* A high relocation had a 16bit input value we relocate versus
 				   the base then chop down */
 				if (high && rawstream) {
@@ -1257,7 +1259,11 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 					r += sv;
 					if (optype == REL_PCREL) {
 						addrdiff_t off = r;
-						off -= dot;
+						/* Word addressed but our dot is byte counting */
+						if (o->oh->o_flags & OF_WORDMACHINE)
+							off -= dot / 2;
+						else
+							off -= dot;
 						if (rel_shift) {
 							if (rel_shift < 0)
 								off <<= -rel_shift;
@@ -1301,6 +1307,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 							fputc(REL_HIGH, op);
 						fputc(REL_SIMPLE | (s->type & S_SEGMENT) | (size - 1) << 4, op);
 					}
+					/* REL_HIGH is only defined for 16bit addresses */
 					if (rawstream && high) {
 						r >>= 8;
 						size = 1;
