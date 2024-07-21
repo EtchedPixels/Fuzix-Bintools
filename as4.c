@@ -424,7 +424,10 @@ void outrawrel(ADDR *a)
 	} else if (segment == a->a_segment) {
 		/* We don't need to issue a relocation if it's within
 		   segment */
-		av -= dot[segment];
+		if (obh.o_flags & OF_WORDMACHINE)
+			av -= dot[segment] / 2;
+		else
+			av -= dot[segment];
 		if (shift) {
 			if (shift < 0)
 				av <<= shift;

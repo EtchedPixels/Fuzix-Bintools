@@ -62,7 +62,7 @@ static void outrel16(ADDR *ap)
 		return;
 	}
 	/* Check what the bias is for the CP1600 TODO */
-//	ap->a_value--;
+	ap->a_value--;
 	outrawrel(ap);
 }
 
@@ -71,13 +71,14 @@ static void outjmp(unsigned r, ADDR *ap, unsigned de)
 {
 	/* TODO: add a custom relocation record */
 	uint32_t v = r << 8;
+	uint32_t a = ap->a_value;
 
 	constify(ap);
 	istuser(ap);
 
-	v |= ((ap->a_value >> 10) & 0x3F) << 2;
+	v |= ((a >> 10) & 0x3F) << 2;
 	v |= de << 8;
-	v |= (ap->a_value & 0x3FF);
+	v |= (a & 0x3FF);
 	outaw(v >> 16);
 	outaw(v);
 }
@@ -250,7 +251,7 @@ loop:
 				sp->s_type |= TMMDF;
 			sp->s_type &= ~TMMODE;
 			sp->s_type |= TUSER;
-			sp->s_value = dot[segment];
+			sp->s_value = dot[segment] / 2;
 			sp->s_segment = segment;
 		} else if (pass != 3) {
 			/* Don't check for duplicates, we did it already
@@ -258,14 +259,14 @@ loop:
 			   before. Instead blindly update the values */
 			sp->s_type &= ~TMMODE;
 			sp->s_type |= TUSER;
-			sp->s_value = dot[segment];
+			sp->s_value = dot[segment] / 2 ;
 			sp->s_segment = segment;
 		} else {
 			/* Phase 2 defined the values so a misalignment here
 			   is fatal */
 			if ((sp->s_type&TMMDF) != 0)
 				err('m', MULTIPLE_DEFS);
-			if (sp->s_value != dot[segment]) {
+			if (sp->s_value != dot[segment] / 2) {
 				err('p', PHASE_ERROR);
 			}
 		}
@@ -313,10 +314,11 @@ loop:
 		if (a1.a_segment != ABSOLUTE)
 			qerr(MUST_BE_ABSOLUTE);
 		segment = ABSOLUTE;
-		dot[segment] = a1.a_value;
+		/* This is in words */
+		dot[segment] = a1.a_value << 1;
 		/* Tell the binary generator we've got a new absolute
-		   segment. */
-		outabsolute(a1.a_value);
+		   segment */
+		outabsolute(a1.a_value << 1);
 		break;
 
 	case TEXPORT:
@@ -404,6 +406,9 @@ loop:
 	case TBRA:
 		getaddr(&a1);
 		outaw(opcode);
+		/* TODO in 10bit mode check range */
+		/* TODO 10bit mode will need a custom reloc to set
+		   the sign bit in the op accordingly */
 		outrel16(&a1);
 		break;
 
