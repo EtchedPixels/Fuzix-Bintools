@@ -1,5 +1,7 @@
 
+	.ds 32
 fred:
+	b fred
 	nop
 	mvii 4,r1
 	movr r2,r3
