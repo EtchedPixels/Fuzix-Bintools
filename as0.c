@@ -52,14 +52,27 @@ static char *xstrdup(const char *p)
 
 static int listbytes;
 
+static void list_header(void)
+{
+#ifdef ADDR32
+	fprintf(lfp, "%1X %08X : ",
+#else
+	fprintf(lfp, "%1X %04X : ",
+#endif
+#ifdef TARGET_WORD_MACHINE
+		segment, dot[segment] / 2);
+#else
+		segment, dot[segment]);
+#endif
+	listbytes = 0;
+}
+
 static void list_beginline(void)
 {
 	if (pass !=3 || !lfp)
 		return;
 	strcpy(lb, ib);	/* Save the input buffer */
-	fprintf(lfp, "%1X %04X : ",
-		segment, dot[segment]);
-	listbytes = 0;
+	list_header();
 }
 
 void list_addbyte(uint8_t byte)
@@ -69,9 +82,7 @@ void list_addbyte(uint8_t byte)
 		if (listbytes == 8) {
 			fputs(lb, lfp);
 			strcpy(lb, "...\n");
-			listbytes = 0;
-			fprintf(lfp, "%1X %04X : ",
-				segment, dot[segment]);
+			list_header();
 		}
 		listbytes++;
 		fprintf(lfp, "%02X ", byte);
