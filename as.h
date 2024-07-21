@@ -541,7 +541,7 @@ typedef	uint32_t	VALUE;		/* For symbol values */
 #define SEGMENT_LIMIT	0x10000		/* bytes */
 
 #define ARCH OA_DGNOVA
-#define ARCH_FLAGS (OF_WORDMACHINE|OF_BIGENDIAN)
+#define ARCH_FLAGS (OF_BIGENDIAN)
 #define ARCH_CPUFLAGS 0
 
 
@@ -1066,10 +1066,11 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 typedef	uint16_t	VALUE;		/* For symbol values */
 
 #define ARCH OA_CP1600
-#define ARCH_FLAGS OF_BIGENDIAN		/* Mostly meaningless - word machine */
+#define ARCH_FLAGS (OF_WORDMACHINE|OF_BIGENDIAN)	/* Mostly meaningless - word machine */
 #define ARCH_CPUFLAGS 0
 
 #define TARGET_BIGENDIAN
+#define TARGET_WORD_MACHINE
 
 /*
  * Types. These are used
