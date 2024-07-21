@@ -1,6 +1,13 @@
 #ifndef _OBJ_H
 #define _OBJ_H
 
+#ifdef ARCH32
+typedef uint32_t	addr_t;
+#define MAGIC_OBJ		0x5D1B
+#define MAGIC_OBJ_SWAPPED	0x1B5D
+#define NAMELEN			32
+#else
+typedef uint16_t	addr_t;
 /* Long name is used for cross building and non 8bit environments. In an
    8bit environment longer names are just too expensive */
 #ifdef OBJ_LONGNAME
@@ -11,6 +18,7 @@
 #define MAGIC_OBJ		0x3D1A
 #define MAGIC_OBJ_SWAPPED	0x1A3D
 #define NAMELEN			16
+#endif
 #endif
 
 #define OSEG	14
@@ -37,6 +45,7 @@ struct objhdr
 #define OA_GB		16	/* Gameboy */
 #define	OA_6805		17	/* 6805/05/HC08 - 6808 is unrelated */
 #define OA_H316		18	/* System 16 */
+#define OA_CP1600	19	/* CP1600 */
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */
@@ -87,7 +96,7 @@ struct objhdr
 
     uint16_t o_unused;		/* So it packs right */
     uint32_t o_segbase[OSEG];
-    uint16_t o_size[OSEG];
+    addr_t o_size[OSEG];
     uint32_t o_symbase;
     uint32_t o_dbgbase;
 };

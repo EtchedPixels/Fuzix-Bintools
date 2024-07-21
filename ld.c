@@ -63,40 +63,50 @@
 #define ENABLE_RESCAN	0
 #endif
 
+#ifdef ARCH32
+#define io_readaddr()	io_read32()
+#define MAXSIZE		4
+typedef int32_t		addrdiff_t;
+#else
+#define io_readaddr()	io_read16()
+#define MAXSIZE		2
+typedef int16_t		addrdiff_t;
+#endif
+
 static char *arg0;			/* Command name */
 static struct object *processing;	/* Object being processed */
 static const char *libentry;		/* Library entry name if relevant */
 static struct object *objects, *otail;	/* List of objects */
 static struct symbol *symhash[NHASH];	/* Symbol has tables */
-static uint16_t base[OSEG];		/* Base of each segment */
-static uint16_t size[OSEG];		/* Size of each segment */
-static uint16_t align = 1;		/* Alignment */
-static uint16_t baseset[OSEG];		/* Did the user force this one */
+static addr_t base[OSEG];		/* Base of each segment */
+static addr_t size[OSEG];		/* Size of each segment */
+static addr_t align = 1;		/* Alignment */
+static addr_t baseset[OSEG];		/* Did the user force this one */
 #define LD_RELOC	0		/* Output a relocatable binary stream */
 #define LD_RFLAG	1		/* Output an object module */
 #define LD_ABSOLUTE	2		/* Output a linked binary */
 #define LD_FUZIX	3		/* Output a Fuzix binary */
-static uint8_t ldmode = LD_FUZIX;	/* Operating mode */
-static uint8_t rawstream;		/* Outputting raw or quoted ? */
+static uint_fast8_t ldmode = LD_FUZIX;	/* Operating mode */
+static uint_fast8_t rawstream;		/* Outputting raw or quoted ? */
 
-static uint8_t split_id;		/* True if code and data both zero based */
-static uint8_t arch;			/* Architecture */
+static uint_fast8_t split_id;		/* True if code and data both zero based */
+static unsigned arch;			/* Architecture */
 static uint16_t arch_flags;		/* Architecture specific flags */
-static uint8_t verbose;			/* Verbose reporting */
+static uint_fast8_t verbose;		/* Verbose reporting */
 static int err;				/* Error tracking */
-static int dbgsyms = 1;			/* Set to dumb debug symbols */
+/*static int dbgsyms = 1;*/			/* Set to dumb debug symbols */
 static int strip = 0;			/* Set to strip symbols */
 static int obj_flags = -1;		/* Object module flags for compat */
 static const char *mapname;		/* Name of map file to write */
 static const char *outname;		/* Name of output file */
-static uint16_t dot;			/* Working address as we link */
+static addr_t dot;			/* Working address as we link */
 
 static unsigned progress;		/* Did we make forward progress ?
 					   Used while library linking */
 static const char *segmentorder = "CLDBX";	/* Segment default order */
 
 static int_fast8_t rel_shift;		/* Relocation scaling */
-static uint16_t rel_mask;		/* Relocation mask */
+static addr_t rel_mask;			/* Relocation mask */
 static uint_fast8_t rel_check;		/* Check fits mask */
 
 static FILE *relocf;
@@ -128,7 +138,7 @@ void error(const char *p)
  */
 static void *xmalloc(size_t s)
 {
-	void *p = malloc(s);
+	register void *p = malloc(s);
 	if (p == NULL)
 		error("out of memory");
 	return p;
@@ -184,10 +194,12 @@ static int io_lseek(off_t pos)
 	return 0;
 }
 
+#if 0
 static off_t io_getpos(void)
 {
 	return (((off_t)ioblock) << 9) | iopos;
 }
+#endif
 
 static int io_read(void *bufp, unsigned len)
 {
@@ -232,10 +244,19 @@ static unsigned io_read16(void)
 	return (p[1] << 8) | p[0];
 }
 
+#ifdef ARCH32
+static uint32_t io_read32(void)
+{
+	uint8_t p[4];
+	io_read(p, 4);
+	return (p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0];
+}
+#endif
+
 /* Our embedded relocs make this a hot path so optimize it. We may
    want a helper that hands back blocks until the reloc marker ? */
 
-unsigned io_readb(uint8_t *ch)
+unsigned io_readb(uint_fast8_t *ch)
 {
 	if (iopos < iolen) {
 		iopos++;
@@ -283,7 +304,7 @@ static void xfseek(FILE *fp, off_t pos)
 	}
 }
 
-static uint16_t xstrtoul(const char *p)
+static addr_t xstrtoul(const char *p)
 {
 	char *r;
 	unsigned long x = strtoul(p, &r, 0);
@@ -377,7 +398,7 @@ struct symbol *find_symbol(register const char *name, int hash)
 static uint8_t hash_symbol(register const char *name)
 {
 	register int hash = 0;
-	register uint8_t n = 0;
+	register uint_fast8_t n = 0;
 
 	while(*name && n++ < NAMELEN)
 		hash += *name++;
@@ -402,10 +423,10 @@ static int is_undefined(const char *name)
 /*
  *	Check that two versions of a symbol are compatible.
  */
-static void segment_mismatch(register struct symbol *s, uint8_t type2)
+static void segment_mismatch(register struct symbol *s, uint_fast8_t type2)
 {
-	register uint8_t seg1 = s->type & S_SEGMENT;
-	register uint8_t seg2 = type2 & S_SEGMENT;
+	register uint_fast8_t seg1 = s->type & S_SEGMENT;
+	register uint_fast8_t seg2 = type2 & S_SEGMENT;
 
 	/* Matching */
 	if (seg1 == seg2)
@@ -432,7 +453,7 @@ static void segment_mismatch(register struct symbol *s, uint8_t type2)
  *	to known and also to ensure we don't have multiple incompatible
  *	definitions or have incompatible definition and requirement.
  */
-static struct symbol *find_alloc_symbol(struct object *o, uint8_t type, const char *id, uint16_t value)
+static struct symbol *find_alloc_symbol(struct object *o, uint_fast8_t type, const char *id, addr_t value)
 {
 	uint8_t hash = hash_symbol(id);
 	register struct symbol *s = find_symbol(id, hash);
@@ -477,7 +498,7 @@ static struct symbol *find_alloc_symbol(struct object *o, uint8_t type, const ch
  *	Add the internal symbols indicating where the segments start and
  *	end.
  */
-static void insert_internal_symbol(const char *name, int seg, uint16_t val)
+static void insert_internal_symbol(const char *name, int seg, addr_t val)
 {
 	if (seg == -1)
 		find_alloc_symbol(NULL, S_ANY | S_UNKNOWN, name, 0);
@@ -512,6 +533,10 @@ static void write_symbols(FILE *fp)
 			fwrite(s->name, NAMELEN, 1, fp);
 			fputc(s->value, fp);
 			fputc(s->value >> 8, fp);
+#ifdef ARCH32			
+			fputc(s->value >> 16, fp);
+			fputc(s->value >> 24, fp);
+#endif			
 		}
 	}
 }
@@ -533,7 +558,11 @@ static void print_symbol(register struct symbol *s, FILE *fp)
 		if (s->type & S_PUBLIC)
 			c = toupper(c);
 	}
+#ifdef ARCH32
+	fprintf(fp, "%08X %c %.*s\n", s->value, c, NAMELEN, s->name);
+#else	
 	fprintf(fp, "%04X %c %.*s\n", s->value, c, NAMELEN, s->name);
+#endif	
 }
 
 /*
@@ -616,12 +645,12 @@ static void openobject(struct object *o)
 static struct object *load_object(off_t off, int lib, const char *path)
 {
 	register int i;
-	uint8_t type;
+	uint_fast8_t type;
 	char name[NAMELEN + 1];
 	register struct object *o = new_object();
 	struct symbol **sp;
 	int nsym;
-	uint16_t value;
+	addr_t value;
 
 	o->path = path;
 	o->off = off;
@@ -652,7 +681,7 @@ restart:
 		io_readb(&type);
 		io_read(name, NAMELEN);
 		name[NAMELEN] = 0;
-		value = io_read16();	/* Little endian */
+		value = io_readaddr();	/* Little endian */
 		if (!(type & S_UNKNOWN) && (type & S_SEGMENT) >= OSEG) {
 			fprintf(stderr, "Symbol %s\n", name);
 			if ((type & S_SEGMENT) == UNKNOWN)
@@ -740,7 +769,7 @@ static void order_segments(void)
 static void set_segment_bases(void)
 {
 	register struct object *o;
-	uint16_t pos[OSEG];
+	addr_t pos[OSEG];
 	register int i;
 
 	/* We are doing a simple model here without split I/D for now */
@@ -825,7 +854,7 @@ static void set_segment_bases(void)
 	for (i = 0; i < NHASH; i++) {
 		struct symbol *s = symhash[i];
 		while (s != NULL) {
-			uint8_t seg = s->type & S_SEGMENT;
+			uint_fast8_t seg = s->type & S_SEGMENT;
 			/* base will be 0 for absolute */
 			if (s->definedby)
 				s->value += s->definedby->base[seg];
@@ -858,8 +887,24 @@ static void target_pquoteb(uint8_t v, FILE *op)
 /*
  *	Write a word to the target in the correct endianness
  */
-static void target_put(struct object *o, uint16_t value, uint16_t size, FILE *op)
+static void target_put(struct object *o, addr_t value, uint16_t size, FILE *op)
 {
+#ifdef ARCH32
+	if (o->oh->o_flags & OF_BIGENDIAN) {
+		unsigned rs = size * 8;
+		while(size--) {
+			target_pquoteb(value >> rs, op);
+			value <<= 8;
+		}
+	} else {
+		while(size--) {
+			target_pquoteb(value, op);
+			value >>= 8;
+		}
+	}
+#else
+	/* Tighter short paths for 16bit so it can run nicely on small
+	   boxes */
 	if (size == 1)
 		target_pquoteb(value, op);
 	else {
@@ -871,11 +916,12 @@ static void target_put(struct object *o, uint16_t value, uint16_t size, FILE *op
 			target_pquoteb(value >> 8, op);
 		}
 	}
+#endif
 }
 
-static uint8_t target_pgetb(void)
+static uint_fast8_t target_pgetb(void)
 {
-	uint8_t c;
+	uint_fast8_t c;
 	if (io_readb(&c) == 0)
 		error("unexpected EOF");
 	return c;
@@ -887,8 +933,25 @@ static uint8_t target_pgetb(void)
  *	while the instruction stream being relocated is of necessity native
  *	endian.
  */
-static uint16_t target_get(struct object *o, uint16_t size)
+static addr_t target_get(struct object *o, uint16_t size)
 {
+#ifdef ARCH32
+	addr_t v = 0;
+	if (o->oh->o-flags & OF_BIGENDIAN) {
+		while(size--) {
+			v <<= 8;
+			v |= target_pgetb();
+		}
+	} else {
+		unsigned s = 0;
+		while(size--) { 
+			v |= target_pgetb() << s;
+			s += 8;
+		}
+	}
+	return v;
+#else
+	/* Tighter hardcoded for speed on 8bit boxes */
 	if (size == 1)
 		return target_pgetb();
 	else {
@@ -897,9 +960,10 @@ static uint16_t target_get(struct object *o, uint16_t size)
 		else
 			return target_pgetb() + (target_pgetb() << 8);
 	}
+#endif
 }
 
-static void record_reloc(struct object *o, unsigned high, unsigned size, unsigned seg, uint16_t addr)
+static void record_reloc(struct object *o, unsigned high, unsigned size, unsigned seg, addr_t addr)
 {
 	if (!relocf)
 		return;
@@ -908,8 +972,10 @@ static void record_reloc(struct object *o, unsigned high, unsigned size, unsigne
 	if (seg == ABSOLUTE)
 		return;
 
+#ifndef ARCH32
 	if (size == 2 && !(o->oh->o_flags & OF_BIGENDIAN))
 		addr++;
+#endif		
 	if (seg == ZP) {
 		fputc(0, relocf);
 		fputc(0, relocf);
@@ -919,9 +985,18 @@ static void record_reloc(struct object *o, unsigned high, unsigned size, unsigne
 	if (size == 1 && !high)
 		return;
 	/* Record the address of the high byte */
+#ifdef ARCH32
+	/* 32bit relocs work differently, record the actual addr */
+	fputc(2, relocf);
+	fputc((addr >> 24), relocf);
+	fputc((addr >> 16), relocf);
+	fputc((addr >> 8), relocf);
+	fputc(addr, relocf);
+#else	
 	fputc(1, relocf);
 	fputc((addr >> 8), relocf);
 	fputc(addr, relocf);
+#endif	
 }
 
 static unsigned is_code(unsigned seg)
@@ -944,20 +1019,20 @@ static unsigned is_code(unsigned seg)
 static void relocate_stream(struct object *o, int segment, FILE * op)
 {
 	register uint8_t size;
-	uint8_t code;
-	register uint16_t r;
+	uint_fast8_t code;
+	register addr_t r;
 	register struct symbol *s;
-	uint8_t tmp;
-	uint8_t seg;
+	uint_fast8_t tmp;
+	uint_fast8_t seg;
 	uint16_t sv;
 
 	processing = o;
 
 	while (io_readb(&code) == 1) {
-		uint8_t optype;
-		uint8_t overflow = 1;
-		uint8_t high = 0;
-		uint8_t pcrel = 0;
+		uint_fast8_t optype;
+		uint_fast8_t overflow = 1;
+		uint_fast8_t high = 0;
+		uint_fast8_t pcrel = 0;
 
 //		if (ldmode == LD_ABSOLUTE && ftell(op) != dot) {
 //			fprintf(stderr, "%ld not %d\n",
@@ -995,7 +1070,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				fprintf(stderr, "%s: cannot set address in non absolute segment.\n", o->path);
 				exit(1);
 			}
-			dot = io_read16();
+			dot = io_readaddr();
 			/* Image has code bank raw then data raw */
 			/* TODO: assumes 16bit */
 			if (!is_code(segment) && split_id)
@@ -1016,6 +1091,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				fputc(tmp, op);
 				continue;
 			}
+			/* FIXME: 32bit masks */
 			rel_mask = (1UL << (tmp & 0x1F)) - 1;
 			if (tmp & 0x80)
 				rel_mask = ~rel_mask;
@@ -1052,7 +1128,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 		if (code & REL_SIMPLE) {
 			seg = code & S_SEGMENT;
 			/* Check entry is valid */
-			if (seg == ABSOLUTE || seg >= OSEG || size > 2) {
+			if (seg == ABSOLUTE || seg >= OSEG || size > MAXSIZE) {
 				fprintf(stderr, "%s invalid reloc %d %d\n",
 					o->path, seg, size);
 				fprintf(stderr, "pcrel %u over %u high %u\n",
@@ -1085,6 +1161,8 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 					error("relocation exceeds mask");
 				r &= rel_mask;
 				/* r is now relative to the address of the relocation */
+				/* TODO: General confusion about if high is top 8bit or >>8 to
+				   deal with */
 				if (high && rawstream) {
 					r >>= 8;
 					size = 1;
@@ -1100,6 +1178,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				//			fprintf(stderr, "Target is %x, Segment %d base is %x\n",
 				//				r, seg, o->base[seg]);
 				r += o->base[seg];
+				/* TODO: Should do reloc fitting for bigger sizes on ARCH32 ? */
 				if (overflow && (r < o->base[seg] || (size == 1 && r > 255))) {
 					fprintf(stderr, "%d width relocation offset %d does not	fit.\n", size, r);
 					fprintf(stderr, "relocation failed at 0x%04X\n", dot);
@@ -1114,6 +1193,8 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				if (rel_check && (r & ~rel_mask))
 					error("relocation exceeds mask");
 				r &= rel_mask;
+				/* TODO: decide what if anything we do with HIGH/LOW versus shift/mask
+				   for 32bit */
 				/* A high relocation had a 16bit input value we relocate versus
 				   the base then chop down */
 				if (high && rawstream) {
@@ -1167,13 +1248,13 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 					}
 				} else {
 					/* Get the relocation data */
-					r = target_get(o, optype == REL_PCREL ? 2 : size);
+					r = target_get(o, optype == REL_PCREL ? MAXSIZE : size);
 					/* Add the offset from the output segment base to the
 					   symbol */
 					sv = s->value;
 					r += sv;
 					if (optype == REL_PCREL) {
-						int16_t off = r;
+						addrdiff_t off = r;
 						off -= dot;
 						if (rel_shift) {
 							if (rel_shift < 0)
@@ -1187,7 +1268,7 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 						off &= rel_mask;
 						if (overflow && size == 1 && (off < -128 || off > 127))
 							error("byte relocation exceeded");
-						r = (uint16_t)off;
+						r = (addr_t)off;
 					} else {
 						/* Check again */
 						if (rel_shift) {
