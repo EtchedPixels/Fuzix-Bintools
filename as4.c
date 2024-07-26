@@ -286,6 +286,16 @@ static void outreloc(register ADDR *a, int bytes)
 	}
 }
 
+void outrad(ADDR *a)
+{
+	outreloc(a, 4);
+}
+
+void outrat(ADDR *a)
+{
+	outreloc(a, 3);
+}
+
 void outraw(ADDR *a)
 {
 	outreloc(a, 2);
@@ -409,17 +419,18 @@ void outrabrel(ADDR *a)
 	outab2(v);
 }
 
-/* Write a relative word. Need to genericise by size */
-void outrawrel(ADDR *a)
+/* Write a segment relative */
+void outrel(ADDR *a, unsigned len)
 {
 	addr_t av = (addr_t)a->a_value;
+	unsigned sc = (len - 1) << 4;
 	check_store_allowed(segment, 1);
 	if (a->a_sym) {
 		outbyte(REL_ESC);
-		outbyte((1 << 4 ) | REL_PCREL);
+		outbyte(sc | REL_PCREL);
 		outbyte(a->a_sym->s_number & 0xFF);
 		outbyte(a->a_sym->s_number >> 8);
-		outaddr(av, 2);
+		outaddr(av, len);
 		return;
 	} else if (segment == a->a_segment) {
 		/* We don't need to issue a relocation if it's within
@@ -437,13 +448,28 @@ void outrawrel(ADDR *a)
 		if (rel_check && (av & ~mask))
 			err('o', CONSTANT_RANGE);
 		av &= mask;
-		outaddr(av, 2);
+		outaddr(av, len);
 	} else {
 		outbyte(REL_ESC);
 		outbyte(REL_PCR);
-		outbyte((1 << 4) | REL_SIMPLE | a->a_segment);
-		outaddr(av, 2);
+		outbyte(sc | REL_SIMPLE | a->a_segment);
+		outaddr(av, len);
 	}
+}
+
+void outrawrel(ADDR *a)
+{
+	outrel(a, 2);
+}
+
+void outratrel(ADDR *a)
+{
+	outrel(a, 3);
+}
+
+void outradrel(ADDR *a)
+{
+	outrel(a, 4);
 }
 
 static void putsymbol(SYM *s, FILE *ofp)

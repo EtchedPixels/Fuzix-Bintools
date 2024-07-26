@@ -44,6 +44,7 @@ void getaddr_reg(ADDR *ap)
 	istuser(ap);
 	if (ap->a_value < 0 || ap->a_value > 15 || ap->a_segment == UNKNOWN)
 		qerr(REGINVALID);
+	ap->a_type = ap->a_value | TWR;
 }
 
 void getaddr_sf(ADDR *ap)
@@ -60,7 +61,11 @@ void getaddr_sf(ADDR *ap)
 		qerr(SFINVALID);
 }
 
-void getaddr_rx(ADDR *ap)
+/* RI format RI1 and RI2
+         immediate
+         immediate(reg)
+ */
+void getaddr_ir(ADDR *ap, unsigned len)
 {
 	ADDR r;
 	unsigned c;
@@ -73,23 +78,94 @@ void getaddr_rx(ADDR *ap)
 	expr1(ap, LOPRI, 0);
 	c = getnb();
 	if (c != '(') {
-		ap->a_type &= ~(TMREG|TMADDR);
+		unget(c);
+		istuser(ap);
+		return;
+	}
+	getaddr_reg(&r);
+	if ((r.a_type & TMREG) == 0)
+		qerr(NO0INDEX);
+	ap->a_type |= TIMMED | r.a_value;
+	c = getnb();
+	if (c != ')')
+		aerr(SYNTAX_ERROR);
+}
+
+/* 
+ * RX is a lot more complex than the PE16.
+ *
+ * RX1
+ *	addr		14bit abs
+ *	addr(reg)
+ * RX2
+ *	addr		15bit PC relative signed
+ *	addr(reg)	Ditto + index
+ *
+ * RX3
+ *	addr		24 bit address
+ *	addr(reg)	24bit address + reg
+ *	addr(reg,reg2)	24bit address + reg + reg2
+ */
+
+static void pick_rxform(ADDR *ap)
+{
+	/* Now decide what kind of RX format */
+	if (ap->a_segment == ABSOLUTE && ap->a_value <= 0x3FFF) {
+		ap->a_type |= TRX1;
+		return;
+	}
+	if (ap->a_segment == segment) {
+		/* Demonstrably PC relative */
+		int32_t diff = ap->a_value - segment[dot] - 5;
+		if (diff < 0x8000 || diff > 0x7FFF) {
+			ap->a_value -= 5;
+			ap->a_type |= TRX2;
+			return;
+		}
+	}
+	/* Either unknown so assume full size or known and too big */
+	ap->a_type |= TRX3;
+	ap->a_value &= 0xFFFFFF;
+	return;
+}
+
+void getaddr_rx(ADDR *ap)
+{
+	ADDR r, r2;
+	unsigned c;
+
+	ap->a_type = 0;
+	ap->a_flags = 0;
+	ap->a_sym = NULL;
+
+	/* The format is addr or addr(reg) */
+	expr1(ap, LOPRI, 0);
+	c = getnb();
+	if (c != '(') {
+		istuser(ap);
+		pick_rxform(ap);
 		return;
 	}
 	getaddr_reg(&r);
 	if (r.a_value == 0)
 		qerr(NO0INDEX);
-	ap->a_type |= TINDEX | r.a_value;
 	c = getnb();
+	if (c == ',') {
+		getaddr_reg(&r2);
+		if ((r2.a_type & TMREG) == 0)
+			qerr(NO0INDEX);
+		c = getnb();
+		if (c != ')')
+			qerr(SYNTAX_ERROR);
+		ap->a_value &= 0xFFFFFF;
+		/* Hack for double reg indexing */
+		ap->a_value |= (r2.a_type & TMREG) << 24;
+		ap->a_type |= TRX3;
+		return;
+	}
 	if (c != ')')
 		qerr(SYNTAX_ERROR);
-}
-
-int getcond(ADDR *ap)
-{
-	if ((ap->a_type & TMMODE) == TCC)
-		return (ap->a_type & TMREG);
-	return -1;
+	pick_rxform(ap);
 }
 
 void getaddr(ADDR *ap)
@@ -117,6 +193,28 @@ void outaw(unsigned v)
 {
 	outab(v >> 8);
 	outab(v & 0xFF);
+}
+
+void outrx(unsigned opcode, ADDR *ap)
+{
+	opcode |= ap->a_type & TMREG;
+	switch(ap->a_type & TMADDR) {
+	case TRX1:
+		outaw(opcode);
+		outaw(ap->a_value & 0x3FFF);
+		break;	
+	case TRX2:
+		outaw(opcode);
+		outaw(0x8000 | (ap->a_value & 0x7FFF));
+		break;
+	case TRX3:
+		outaw(opcode);
+		outab(0x40 | ((ap->a_value >> 24) & 0x0F));
+		outratrel(ap);
+		break;
+	default:
+		aerr(SYNTAX_ERROR);
+	}
 }
 
 /*
@@ -259,15 +357,16 @@ loop:
 			outab(0);
 		break;
 
-	case TIMPL:
-		/* There are no real implicit ops - these are aliases */
+	case TBFRR:
+		getaddr_sf(&a1);
+		comma();
+		getaddr_reg(&a2);
+		opcode <<= 8;
+		opcode |= a1.a_value << 4;
+		opcode |= a2.a_value;
 		outaw(opcode);
 		break;
-	case TIMPLZ:
-		/* There are no real implicit ops - these are aliases */
-		outaw(opcode);
-		outaw(0);
-		break;
+
 	case TRR:
 		getaddr_reg(&a1);
 		comma();
@@ -277,16 +376,7 @@ loop:
 		opcode |= a2.a_value;
 		outaw(opcode);
 		break;
-	case TRRL:
-		getaddr_reg(&a1);
-		comma();
-		getaddr_reg(&a2);
-		check_pair(&a1);
-		opcode <<= 8;
-		opcode |= a1.a_value << 4;
-		opcode |= a2.a_value;
-		outaw(opcode);
-		break;
+
 	case TRRF:
 		getaddr_reg(&a1);
 		comma();
@@ -298,6 +388,30 @@ loop:
 		opcode |= a2.a_value;
 		outaw(opcode);
 		break;
+
+	case TBRR:
+		/* TODO: Need to look at branch relocs here properly */
+		getaddr_reg(&a1);
+		opcode <<= 8;
+		opcode |= a2.a_value;
+		outaw(opcode);
+		break;
+
+	case TR0:
+		getaddr_reg(&a1);
+		opcode <<= 8;
+		opcode |= a2.a_value;
+		outaw(opcode);
+		break;
+
+	case TBSF:
+		/* TODO sort out relatives and do branches properly */
+		/* Also bit in opcode for +ve/-ve */
+		getaddr_sf(&a1);
+		opcode |= a1.a_value;
+		outaw(opcode);
+		break;
+
 	case TSF:
 		getaddr_reg(&a1);
 		comma();
@@ -307,29 +421,84 @@ loop:
 		opcode |= a2.a_value;
 		outaw(opcode);
 		break;
-	case TRI:
+
+	case TSVC:	/* N rather than reg */
+		getaddr_sf(&a1);
+		comma();
+		getaddr_rx(&a2);
+		opcode <<= 8;
+		opcode |= a1.a_value << 4;
+		opcode |= a2.a_type & TMREG;
+		outaw(opcode);
+		outraw(&a2);
+		break;
+
 	case TRX:
 		getaddr_reg(&a1);
 		comma();
 		getaddr_rx(&a2);
 		opcode <<= 8;
 		opcode |= a1.a_value << 4;
-		opcode |= a2.a_type & TMREG;
-		outaw(opcode);
-		outraw(&a2);
+		outrx(opcode, &a2);
 		break;
-	case TRIL:
-	case TRXL:
+
+	case TBFRX:
+		getaddr_sf(&a1);
+		comma();
+		getaddr_rx(&a2);
+		opcode <<= 8;
+		opcode |= a1.a_value << 4;
+		outrx(opcode, &a2);
+		break;
+
+	case TRXF:
 		getaddr_reg(&a1);
 		check_pair(&a1);
 		comma();
 		getaddr_rx(&a2);
 		opcode <<= 8;
 		opcode |= a1.a_value << 4;
+		outrx(opcode, &a2);
+		break;
+
+	case TBRX:
+		/* TODO: Need to look at branches properly */
+		getaddr_rx(&a1);
+		opcode <<= 8;
+		outrx(opcode, &a1);
+		break;
+
+	case TRX0:
+		getaddr_rx(&a1);
+		opcode <<= 8;
+		outrx(opcode, &a1);
+		break;
+
+	case TRI1:
+		getaddr_reg(&a1);
+		comma();
+		getaddr_ir(&a2, 16);
+		opcode <<= 8;
+		opcode |= a1.a_value << 4;
 		opcode |= a2.a_type & TMREG;
 		outaw(opcode);
 		outraw(&a2);
 		break;
+
+	case TRI2:
+		getaddr_reg(&a1);
+		comma();
+		getaddr_ir(&a2, 32);
+		opcode <<= 8;
+		opcode |= a1.a_value << 4;
+		opcode |= a2.a_type & TMREG;
+		outaw(opcode);
+		outrad(&a2);
+		break;
+
+
+	/* TODO: TRI1 TRI2 */
+	/* TWDCS TRDCS */
 	default:
 		aerr(SYNTAX_ERROR);
 	}

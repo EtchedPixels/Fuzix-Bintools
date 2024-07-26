@@ -937,7 +937,7 @@ static addr_t target_get(struct object *o, uint16_t size)
 {
 #ifdef ARCH32
 	addr_t v = 0;
-	if (o->oh->o-flags & OF_BIGENDIAN) {
+	if (o->oh->o_flags & OF_BIGENDIAN) {
 		while(size--) {
 			v <<= 8;
 			v |= target_pgetb();

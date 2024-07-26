@@ -46,6 +46,7 @@ struct objhdr
 #define	OA_6805		17	/* 6805/05/HC08 - 6808 is unrelated */
 #define OA_H316		18	/* System 16 */
 #define OA_CP1600	19	/* CP1600 */
+#define OA_PE32		20	/* Interdata/Perkin Elmer 32bit */
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */
