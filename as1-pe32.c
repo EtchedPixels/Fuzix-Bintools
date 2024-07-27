@@ -45,6 +45,7 @@ void getaddr_reg(ADDR *ap)
 	if (ap->a_value < 0 || ap->a_value > 15 || ap->a_segment == UNKNOWN)
 		qerr(REGINVALID);
 	ap->a_type = ap->a_value | TWR;
+	ap->a_value = 0;
 }
 
 void getaddr_sf(ADDR *ap)
@@ -85,7 +86,7 @@ void getaddr_ir(ADDR *ap, unsigned len)
 	getaddr_reg(&r);
 	if ((r.a_type & TMREG) == 0)
 		qerr(NO0INDEX);
-	ap->a_type |= TIMMED | r.a_value;
+	ap->a_type |= TIMMED | (r.a_type & TMREG);
 	c = getnb();
 	if (c != ')')
 		aerr(SYNTAX_ERROR);
@@ -140,15 +141,18 @@ void getaddr_rx(ADDR *ap)
 
 	/* The format is addr or addr(reg) */
 	expr1(ap, LOPRI, 0);
+	istuser(ap);
 	c = getnb();
 	if (c != '(') {
-		istuser(ap);
 		pick_rxform(ap);
 		return;
 	}
 	getaddr_reg(&r);
-	if (r.a_value == 0)
+	if ((r.a_type & TMREG) == 0)
 		qerr(NO0INDEX);
+
+	ap->a_type |= r.a_type & TMREG;
+
 	c = getnb();
 	if (c == ',') {
 		getaddr_reg(&r2);
