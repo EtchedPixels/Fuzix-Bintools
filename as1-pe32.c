@@ -39,6 +39,7 @@ void getaddr_reg(ADDR *ap)
 	ap->a_type = 0;
 	ap->a_flags = 0;
 	ap->a_sym = NULL;
+	ap->a_value = 0;
 
 	expr1(ap, LOPRI, 0);
 	istuser(ap);
@@ -55,6 +56,7 @@ void getaddr_sf(ADDR *ap)
 	ap->a_type = 0;
 	ap->a_flags = 0;
 	ap->a_sym = NULL;
+	ap->a_value = 0;
 
 	expr1(ap, LOPRI, 0);
 	istuser(ap);
@@ -74,6 +76,7 @@ void getaddr_ir(ADDR *ap, unsigned len)
 	ap->a_type = 0;
 	ap->a_flags = 0;
 	ap->a_sym = NULL;
+	ap->a_value = 0;
 
 	/* The format is addr or addr(reg) */
 	expr1(ap, LOPRI, 0);
@@ -239,6 +242,7 @@ void asmline(void)
 	char id1[NCPS];
 	ADDR a1;
 	ADDR a2;
+	int32_t diff;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
@@ -366,8 +370,8 @@ loop:
 		comma();
 		getaddr_reg(&a2);
 		opcode <<= 8;
-		opcode |= a1.a_value << 4;
-		opcode |= a2.a_value;
+		opcode |= (a1.a_type & TMREG) << 4;
+		opcode |= a2.a_type & TMREG;
 		outaw(opcode);
 		break;
 
@@ -376,8 +380,8 @@ loop:
 		comma();
 		getaddr_reg(&a2);
 		opcode <<= 8;
-		opcode |= a1.a_value << 4;
-		opcode |= a2.a_value;
+		opcode |= (a1.a_type & TMREG) << 4;
+		opcode |= a2.a_type & TMREG;
 		outaw(opcode);
 		break;
 
@@ -388,8 +392,8 @@ loop:
 		check_pair(&a1);
 		check_pair(&a2);
 		opcode <<= 8;
-		opcode |= a1.a_value << 4;
-		opcode |= a2.a_value;
+		opcode |= (a1.a_type & TMREG) << 4;
+		opcode |= a2.a_type & TMREG;
 		outaw(opcode);
 		break;
 
@@ -397,22 +401,65 @@ loop:
 		/* TODO: Need to look at branch relocs here properly */
 		getaddr_reg(&a1);
 		opcode <<= 8;
-		opcode |= a2.a_value;
+		opcode |= a1.a_type & TMREG;
 		outaw(opcode);
 		break;
 
 	case TR0:
 		getaddr_reg(&a1);
 		opcode <<= 8;
-		opcode |= a2.a_value;
+		opcode |= a1.a_type & TMREG;
 		outaw(opcode);
 		break;
 
 	case TBSF:
-		/* TODO sort out relatives and do branches properly */
+		/* Also bit in opcode for +ve/-ve */
+		getaddr(&a1);
+		istuser(&a1);
+		/* Now check is valid */
+		if (a1.a_segment == ABSOLUTE)
+			diff = a1.a_value;
+		else if (a1.a_segment == segment) {
+			diff = a1.a_value - dot[segment];
+			diff /= 2;
+		} else
+			aerr(SFINVALID);
+
+		if (diff >= 0)
+			opcode |= 0x0100;
+		else
+			diff = -diff;
+
+		if (diff > 15)
+			qerr(SFINVALID);
+		opcode |= diff & 0x0F;
+		outaw(opcode);
+		break;
+
+	case TBFSF:
 		/* Also bit in opcode for +ve/-ve */
 		getaddr_sf(&a1);
-		opcode |= a1.a_value;
+		comma();
+		getaddr(&a2);
+		istuser(&a2);
+		opcode <<= 8;
+		/* Now check is valid */
+		if (a2.a_segment == ABSOLUTE)
+			diff = a2.a_value;
+		else if (a2.a_segment == segment) {
+			diff = a2.a_value - dot[segment];
+			diff /= 2;
+			if (diff >= 0)
+				opcode |= 0x0100;
+			else
+				diff = -diff;
+		} else
+			aerr(SFINVALID);
+
+		if (diff > 15 || diff < 0)
+			qerr(SFINVALID);
+		opcode |= a1.a_value << 4;
+		opcode |= diff & 0x0F;
 		outaw(opcode);
 		break;
 
@@ -442,7 +489,7 @@ loop:
 		comma();
 		getaddr_rx(&a2);
 		opcode <<= 8;
-		opcode |= a1.a_value << 4;
+		opcode |= (a1.a_type & TMREG) << 4;
 		outrx(opcode, &a2);
 		break;
 
@@ -461,14 +508,12 @@ loop:
 		comma();
 		getaddr_rx(&a2);
 		opcode <<= 8;
-		opcode |= a1.a_value << 4;
+		opcode |= (a1.a_type & TMREG) << 4;
 		outrx(opcode, &a2);
 		break;
 
 	case TBRX:
-		/* TODO: Need to look at branches properly */
 		getaddr_rx(&a1);
-		opcode <<= 8;
 		outrx(opcode, &a1);
 		break;
 
@@ -501,7 +546,6 @@ loop:
 		break;
 
 
-	/* TODO: TRI1 TRI2 */
 	/* TWDCS TRDCS */
 	default:
 		aerr(SYNTAX_ERROR);

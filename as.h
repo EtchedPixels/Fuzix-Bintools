@@ -1503,11 +1503,12 @@ typedef	uint32_t	VALUE;		/* For symbol values */
 #define TSVC	0x1A00			/* SVC */
 #define TBFRX	0x1B00			/* Branch RX form */
 #define TBFRR	0x1C00			/* Branch RR form */
-#define TBRX	0x1D00			/* Branch alias RX form */
-#define TBRR	0x1E00			/* Branch alias RR form */
-#define TBSF	0x1F00			/* Branch alias short form */
-#define TWDCS	0x2000			/* WDCS */
-#define TRDCS	0x2100			/* RDCS */
+#define TBFSF	0x1D00			/* Branch short form */
+#define TBRX	0x1E00			/* Branch alias RX form */
+#define TBRR	0x1F00			/* Branch alias RR form */
+#define TBSF	0x2000			/* Branch alias short form */
+#define TWDCS	0x2100			/* WDCS */
+#define TRDCS	0x2200			/* RDCS */
 
 /*
  *	Error message numbers
