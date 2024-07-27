@@ -120,19 +120,19 @@ static void reloc_size(int n)
 
 static int reloc_word(int fd, int size)
 {
-    int n;
-    if (size == 1)
-        n = nextbyte(fd);
-    else if (size == 2) {
-        if (bigendian) {
-            n = nextbyte(fd) << 8;
+    addr_t n = 0;
+    if (bigendian) {
+        while(size--) {
+            n <<= 8;
             n |= nextbyte(fd);
-        } else {
-            n = nextbyte(fd);
-            n |= nextbyte(fd) << 8;
         }
-    } else
-        fprintf(stderr, "invalid size %d.\n", size);
+    } else {
+        unsigned shift = (size - 1) * 8;
+        while(size--) {
+            n |= nextbyte(fd) << shift;
+            shift -= 8;
+        }
+    }
     return n;
 }
 
