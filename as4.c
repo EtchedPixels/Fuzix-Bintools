@@ -179,7 +179,6 @@ static void outqcaddr(addr_t a, unsigned s)
 		outab2(a >> shift);
 		a <<= 8;
 	}
-	outab(a >> shift);
 #else
 	while(s--) {
 		outab2(a);
