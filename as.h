@@ -2055,6 +2055,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define TENTER	0x2700
 #define TJCX	0x2800			/* Like JCC but no auto-extend */
 #define TSETCPU 0x2900			/* .86 , .186 etc */
+#define TRET	0x2A00			/* Optional 16bit integer */
 
 /*
  * Registers. Encoding order matches instructions

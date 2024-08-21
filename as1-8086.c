@@ -513,6 +513,20 @@ loop:
 		outab(opcode);
 		break;
 
+	case TRET:
+		c = getnb();
+		if (c == '\n') {
+			outab(opcode | 1);
+			break;
+		}
+		unget(c);
+		getaddr(&a1);
+		constify(&a1);
+		istuser(&a1);
+		outab(opcode);
+		outraw(&a1);
+		break;
+
 	case TJCX:
 		getaddr(&a1);
 		disp = a1.a_value - dot[segment] - 2;
@@ -536,16 +550,16 @@ loop:
 			if (pass == 2)
 				setnextrel(c);
 		}
-		if (c) {	/* Convert shot branches to jumps */
-			/* TODO: set up for 8086 */
-			if (opcode == 0x8D)	/* BSR -> LBSR */
-				outab(0x17);
-			else if (opcode == 0x20) /* BRA -> LBRA */
-				outab(0x16);
-			else {	/* Conditional ones expand with 0x10 */
-				outab(0x10);
-				outab(opcode);
+		if (c) {
+			/* JMP short to JMP direct within segment */
+			if (opcode != 0xEB) {
+				/* Inverted conditional */
+				outab(opcode ^ 1);
+				/* And skip over the full jump op */
+				outab(0x03);
 			}
+			/* Unconditional 16bit jump */
+			outab(0xE9);
 			write_rel16(&a1);
 		} else {
 			a1.a_value -= dot[segment];
