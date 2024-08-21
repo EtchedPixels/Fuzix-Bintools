@@ -527,6 +527,24 @@ loop:
 		outraw(&a1);
 		break;
 
+	case TCALL:
+		getaddr_mem(&a1, &mod1);
+		ta1 = a1.a_type & TMMODE;
+		segprefix();
+		if ((a1.a_type & TMADDR) == TMODRM) {
+			outab(0xFF);
+			mod1 |= 0x10;	/* mod 010 r/m for call */
+			outmod(mod1, &a1);
+			break;
+		}
+		if ((a1.a_type & TMADDR) == TIMMED) {
+			outab(opcode);
+			outraw(&a1);
+			break;
+		}
+		aerr(SYNTAX_ERROR);
+		break;
+
 	case TJCX:
 		getaddr(&a1);
 		disp = a1.a_value - dot[segment] - 2;
@@ -535,6 +553,8 @@ loop:
 		outab(opcode);
 		outab(disp);
 		break;
+
+	/* TODO: jmp modrm forms so jmp shouldn't use TJCC */
 
 	case TJCC:
 		getaddr(&a1);
@@ -711,6 +731,7 @@ loop:
 		} else
 			aerr(BADMODE);
 		break;
+
 	case TRM:
 		/* inc, dec, neg, not */
 		getaddr_mem(&a1, &mod1);
@@ -1001,7 +1022,33 @@ loop:
 		}
 		qerr(BADMODE);
 		break;
-			
+	case T186RM:
+		need_186();
+		/* bound */
+		getaddr_mem(&a1, &mod1);
+		comma();
+		getaddr_mem(&a2, &mod2);
+		ta1 = a1.a_type & TMMODE;
+		ta2 = a2.a_type & TMMODE;
+		if (ta1 != TWR)
+			aerr(BADMODE);
+		else if ((a2.a_type & TMADDR) != TMODRM)
+			aerr(BADMODE);
+		else {
+			mod1 |= (a1.a_type & TMREG) << 3;
+			outab(opcode);
+			outmod(mod1, &a1);
+		}
+		break;
+	case TENTER:
+		need_186();
+		getaddr(&a1);
+		comma();
+		getaddr(&a2);
+		outab(opcode);
+		outraw(&a1);
+		outrab(&a2);
+		break;
 		
 	default:
 		aerr(SYNTAX_ERROR);

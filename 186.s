@@ -64,7 +64,9 @@
 	and al,bl
 	and al,[fred]
 	and [fred],al
-;	call
+	call fred
+	call ds:fred
+	call [bx]
 ;	callf
 	cbw
 	clc
@@ -138,6 +140,7 @@ fred:
 	jz fred
 	jmp fred
 	jmp eric
+;	jmp [bx]	need to fix the jmp handling to not use TJCC
 ;	jmpf fred
 	lahf
 	lds [fred]
@@ -265,8 +268,8 @@ foo:
 
 	.186
 
-;	bound
-;	enter 0,0
+	bound cx,[bx]
+	enter 0,1
 ;	ins
 	insb
 	insw
