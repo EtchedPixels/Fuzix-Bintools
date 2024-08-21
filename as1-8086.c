@@ -554,7 +554,43 @@ loop:
 		outab(disp);
 		break;
 
-	/* TODO: jmp modrm forms so jmp shouldn't use TJCC */
+	case TJMP:
+		getaddr_mem(&a1, &mod1);
+		ta1 = a1.a_type & TMMODE;
+		segprefix();
+		if ((a1.a_type & TMADDR) == TMODRM) {
+			outab(0xFF);
+			mod1 |= 0x20;	/* mod 100 r/m for jmp */
+			outmod(mod1, &a1);
+			break;
+		}
+		if ((a1.a_type & TMADDR) != TIMMED) {
+			aerr(SYNTAX_ERROR);
+			break;
+		}
+		disp = a1.a_value - dot[segment] - 2;
+		if (pass == 3)
+			c = getnextrel();
+		else {
+			c = 0;
+			/* Will it fit, do we know ? */
+			if (pass == 0 || segment_incompatible(&a1) || disp<-128 || disp>127)
+				c = 1;
+			/* On pass 2 we lock down our choices in the table */
+			if (pass == 2)
+				setnextrel(c);
+		}
+		if (c) {
+			/* JMP short to JMP direct within segment */
+			outab(0xE9);
+			write_rel16(&a1);
+		} else {
+			a1.a_value -= dot[segment];
+			a1.a_value -= 2;
+			outab(opcode);
+			outrabrel(&a1);
+		}
+		break;
 
 	case TJCC:
 		getaddr(&a1);

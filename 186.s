@@ -140,7 +140,7 @@ fred:
 	jz fred
 	jmp fred
 	jmp eric
-;	jmp [bx]	need to fix the jmp handling to not use TJCC
+	jmp [bx]	;need to fix the jmp handling to not use TJCC
 ;	jmpf fred
 	lahf
 	lds [fred]
