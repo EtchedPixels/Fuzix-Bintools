@@ -31,6 +31,10 @@
 	adc ax,[bp + di + 518]
 	adc ax,[bp + si + 519]
 	adc ax,[fred]
+	adc ax,cs:[fred]
+	adc ax,ds:[fred]
+	adc ax,es:[fred]
+	adc ax,ss:[fred]
 	adc [fred],ax
 	adc [fred],1
 	adc al,1
@@ -132,7 +136,8 @@ fred:
 	jpo fred
 	js fred
 	jz fred
-;	jmp fred
+	jmp fred
+	jmp eric
 ;	jmpf fred
 	lahf
 	lds [fred]
@@ -199,6 +204,8 @@ foo:
 	repnz lock nop
 	ret
 	retf
+	ret 4
+	retf 12
 	rol ax
 	ror dl
 	sahf
@@ -241,7 +248,7 @@ foo:
 	wait
 	xchg ax,bx
 	xchg al,bl
-	xchg ax,[_fred]		; fails phase error ??
+	xchg ax,[_fred]
 	xchg [_fred],ax
 	xlat
 	xor ax,1
