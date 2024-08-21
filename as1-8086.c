@@ -90,6 +90,39 @@ void getaddr(ADDR *ap)
 	expr1(ap, LOPRI, 0);
 }
 
+static uint8_t segbyte;
+
+void setsegment(int c)
+{
+	switch(c) {
+	case 0:
+		segbyte = 0;
+		break;
+	case 'c':
+		segbyte = 0x2E;
+		break;
+	case 'd':
+		segbyte = 0x3E;
+		break;
+	case 'e':
+		segbyte = 0x26;
+		break;
+	case 's':
+		segbyte = 0x36;
+		break;
+	default:
+		qerr(SYNTAX_ERROR);
+	}
+}
+
+void segprefix(void)
+{
+	if (segbyte) {
+		outab(segbyte);
+		segbyte = 0;
+	}
+}
+
 /*
  *	Complex encodings.
  *
@@ -176,7 +209,7 @@ static unsigned make_modrm(ADDR *ap, unsigned r1, unsigned r2)
 	return modrm;
 }
 
-/* TODO: segment prefixing, byte/word hints */
+/* TODO: byte/word hints */
 void getaddr_mem(ADDR *ap, unsigned *modrm)
 {
 	int c;
@@ -189,6 +222,18 @@ void getaddr_mem(ADDR *ap, unsigned *modrm)
 	ap->a_sym = NULL;
 
 	c = getnb();
+	
+	if (c == 'c' || c == 'd' || c == 'e' || c == 's') {
+		int nc = getnb();
+		int nc2 = getnb();
+		if (nc != 's' || nc2 != ':') {
+			unget(nc2);
+			unget(nc);
+		} else {
+			setsegment(c);
+			c = getnb();
+		}
+	}
 	if (c == '[') {
 		mem = 1;
 		c = getnb();
@@ -319,6 +364,7 @@ void asmline(void)
 	unsigned mod2;
 
 loop:
+	setsegment(0);
 	if ((c=getnb())=='\n' || c==';')
 		return;
 	if (isalpha(c) == 0 && c != '_' && c != '.')
@@ -490,7 +536,8 @@ loop:
 			if (pass == 2)
 				setnextrel(c);
 		}
-		if (c) {	/* LBxx is 0x10, Bxx, ... */
+		if (c) {	/* Convert shot branches to jumps */
+			/* TODO: set up for 8086 */
 			if (opcode == 0x8D)	/* BSR -> LBSR */
 				outab(0x17);
 			else if (opcode == 0x20) /* BRA -> LBRA */
@@ -523,7 +570,7 @@ loop:
 			/* Only an address is permitted TODO: 186 const */
 			if (mod1 != 0x06)
 				aerr(BADMODE);
-//			outsegment();
+			segprefix();
 			outab(0xFF);
 			outab(mod1 | 0x30);
 			/* FIXME raw or relraw */
@@ -546,7 +593,7 @@ loop:
 			/* Only an address is permitted */
 			if (mod1 != 0x06)
 				aerr(BADMODE);
-//			outsegment();
+			segprefix();
 			outab(0x8F);
 			outab(mod1 | 0x30);
 			/* FIXME raw or relraw */
@@ -595,7 +642,7 @@ loop:
 			/* addr, reg */
 			if ((a2.a_type & TMMODE) == TWR) {
 				mod1 |= (a2.a_type & TMREG) << 3;
-//				outsegment();
+				segprefix();
 				outab(0x87);
 				/* TODO: block xchg with immediate and some  others like that */
 				outmod(mod1, &a1);
@@ -603,7 +650,7 @@ loop:
 			}
 			if ((a2.a_type & TMMODE) == TBR) {
 				mod1 |= (a2.a_type & TMREG) << 3;
-//				outsegment();
+				segprefix();
 				outab(0x86);
 				/* TODO: block xchg with immediate and some  others like that */
 				outmod(mod1, &a1);
@@ -613,7 +660,7 @@ loop:
 			/* reg, addr */
 			if ((a1.a_type & TMMODE) == TWR) {
 				mod2 |= (a1.a_type & TMREG) << 3;
-//				outsegment();
+				segprefix();
 				outab(0x87);
 				/* TODO: block xchg with immediate and some  others like that */
 				outmod(mod2, &a2);
@@ -621,7 +668,7 @@ loop:
 			}
 			if ((a1.a_type & TMMODE) == TBR) {
 				mod2 |= (a1.a_type & TMREG) << 3;
-//				outsegment();
+				segprefix();
 				outab(0x86);
 				/* TODO: block xchg with immediate and some  others like that */
 				outmod(mod2, &a2);
@@ -672,7 +719,7 @@ loop:
 		}
 		/* Long forms of all */
 		if ((a1.a_type & TMADDR) == TMODRM) {
-//			outsegment();
+			segprefix();
 			outab((opcode >> 8) | opsize(mod1, &a1));
 			mod1 |= opcode & 0xFF;
 			outmod(mod1, &a1);
@@ -684,7 +731,7 @@ loop:
 		getaddr_mem(&a1, &mod1);
 		if ((a1.a_type & TMADDR) != TMODRM)
 			aerr(BADMODE);
-//		outsegment();
+		segprefix();
 		outab(opcode);
 		/* 8086 manual appears to be wrong here as it talks about
 		   reg and r/m but here is no reg */
@@ -706,7 +753,7 @@ loop:
 	case TDIV:
 	case TMUL:
 		getaddr_mem(&a1, &mod1);
-//		outsegment();
+		segprefix();
 		/* TODO 186 const form */
 		/* TODO size detection for mem form */
 		if ((a1.a_type & TMMODE) == TWR) {
@@ -732,7 +779,7 @@ loop:
 	case TSHIFT:
 		/* TODO: 186 forms */
 		getaddr_mem(&a1, &mod1);
-//		outsegment();
+		segprefix();
 		if ((a1.a_type & TMMODE) == TWR) {
 			mod1 = 0xC0 | opcode | (a1.a_type & TMREG);
 			outab((opcode >> 8) | 1);
@@ -761,7 +808,7 @@ loop:
 		getaddr_mem(&a2, &mod2);
 		ta1 = a1.a_type & TMMODE;
 		ta2 = a2.a_type & TMMODE;
-//		outsegment();
+		segprefix();
 		/* Short forms */
 		if (a1.a_type == (TWR|AX) && a2.a_type == (TUSER|TIMMED)) {
 			outab(opcode|5);
@@ -844,7 +891,7 @@ loop:
 		getaddr_mem(&a2, &mod2);
 		ta1 = a1.a_type & TMMODE;
 		ta2 = a2.a_type & TMMODE;
-//		outsegment();
+		segprefix();
 		/* mov is really two instructions mov and segment mov */
 		if (ta1 == TSR && ta2 == TSR) {
 			aerr(BADMODE);
