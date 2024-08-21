@@ -250,7 +250,10 @@ foo:
 	sub al,bl
 	sub al,[fred]
 	sub [fred],al
-;	test
+	test ax,[bx]
+	test ax,0x1234
+	test ax,1
+	test al,0
 	wait
 	xchg ax,bx
 	xchg al,bl
