@@ -185,7 +185,10 @@ foo:
 	not bl
 	not cx
 	not [fred]
-;	or
+	or ax,bx
+	or ax,0x1234
+	or al,5
+	or ax,6
 	out ax,12
 	out al,12
 	out al,dx
