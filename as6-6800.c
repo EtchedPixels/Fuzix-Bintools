@@ -233,6 +233,15 @@ SYM	sym[] = {
 	{	0,	"ldx",		T16DIXE,	0xCE	},
 	{	0,	"stx",		T16DXE,		0xCF	},
 	{	0,	"jsr",		T16DXE,		0x8D	},
+
+	/* 6809 compatible forms for convenience and compiler sanity */
+	{	0,	"lda",		TDIXE,		0x86	},
+	{	0,	"sta",		TDXE,		0x87	},
+	{	0,	"ldb",		TDIXE,		0xC6	},
+	{	0,	"stb",		TDXE,		0xC7	},
+	{	0,	"ora",		TDIXE,		0x8A	},
+	{	0,	"orb",		TDIXE,		0xCA	},
+
 };
 
         
