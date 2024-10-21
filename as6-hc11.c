@@ -240,6 +240,15 @@ SYM	sym[] = {
 	{	0,	"stx",		T16DXE,		0xCF	},
 	{	0,	"sty",		T16DXE,		0x18CF	},
 	{	0,	"jsr",		T16DXE,		0x8D	},
+
+	/* 6809 style lda/sta/ora for convenience */
+	{	0,	"lda",		TDIXE,		0x86	},
+	{	0,	"sta",		TDXE,		0x87	},
+	{	0,	"ldb",		TDIXE,		0xC6	},
+	{	0,	"stb",		TDXE,		0xC7	},
+	{	0,	"ora",		TDIXE,		0x8A	},
+	{	0,	"orb",		TDIXE,		0xCA	},
+
 };
 
         
