@@ -149,7 +149,7 @@ SYM	sym[] = {
 	{	0,	"coma",		TIMPL,		0x43	},
 	{	0,	"lsra",		TIMPL,		0x44	},
 	{	0,	"rora",		TIMPL,		0x46	},
-	{	0,	"asra",		TIMPL,		0x1847	},
+	{	0,	"asra",		TIMPL,		0x47	},
 	{	0,	"asla",		TIMPL,		0x48	},
 	{	0,	"lsla",		TIMPL,		0x48	},
 	{	0,	"rola",		TIMPL,		0x49	},
