@@ -458,16 +458,22 @@ loop:
 			outrab(&a1);
 			break;
 		case TINDEX:
-			if (opcode >> 8)
-				outab(opcode >> 8);
+			/* Usually 18xx but LDY ,X and STY ,X are 1Axx */
+			if (opcode >> 8) {
+				if (opcode == 0x18CE || opcode == 0x18CF)
+					outab(0x1A);
+				else
+					outab(opcode >> 8);
+			}
 			outab(opcode + 0x20);
 			outab(a1.a_value);
 			break;
 		case TINDEY:
 			/* Weird rule for LDX, STX, CPD, CPX */
-			if (opcode == 0xCA || opcode == 0xCE || opcode == 0xCF ||
-				opcode == 0x1A83)
+			if (opcode == 0xCA || opcode == 0xCE || opcode == 0xCF || opcode == 0x1A83)
 				outab(0xCD);
+			else if (opcode == 0x18CE || opcode == 0x18CF)
+				outab(0x18);		/* LDY n,Y and STY n,Y */
 			/* 18xx forms become 1Axx */
 			else if (opcode >> 8)
 				outab(0x1A);
