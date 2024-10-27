@@ -458,9 +458,9 @@ loop:
 			outrab(&a1);
 			break;
 		case TINDEX:
-			/* Usually 18xx but LDY ,X and STY ,X are 1Axx */
+			/* Usually 18xx but CPY ,X LDY ,X and STY ,X are 1Axx */
 			if (opcode >> 8) {
-				if (opcode == 0x18CE || opcode == 0x18CF)
+				if (opcode == 0x188C || opcode == 0x18CE || opcode == 0x18CF)
 					outab(0x1A);
 				else
 					outab(opcode >> 8);
@@ -472,8 +472,8 @@ loop:
 			/* Weird rule for LDX, STX, CPD, CPX */
 			if (opcode == 0xCA || opcode == 0xCE || opcode == 0xCF || opcode == 0x1A83)
 				outab(0xCD);
-			else if (opcode == 0x18CE || opcode == 0x18CF)
-				outab(0x18);		/* LDY n,Y and STY n,Y */
+			else if (opcode == 0x188C || opcode == 0x18CE || opcode == 0x18CF)
+				outab(0x18);		/* CPY n,Y LDY n,Y and STY n,Y */
 			/* 18xx forms become 1Axx */
 			else if (opcode >> 8)
 				outab(0x1A);
