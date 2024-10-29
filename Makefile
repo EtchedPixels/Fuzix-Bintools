@@ -20,11 +20,11 @@ test: as316 ld316 nm316 osize316 dumprelocs316 \
       as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
       as8086 ld8086 nm8086 osize8086 dumprelocs8086 \
       ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600 \
+      aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 \
       aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 \
       aspe32 ldpe32 nmpe32 osizepe32 dumprelocspe32
 
-todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096 \
-      aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4
+todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096
 
 CCROOT ?=/opt/fcc/
 
@@ -279,6 +279,20 @@ osizenova: $(HDR) osize.c
 dumprelocsnova: $(HDR) dumprelocs.c
 	$(CC) $(CFLAGS) -o dumprelocsnova dumprelocs.c
 
+aspdp4: $(HDR) $(CORE) as1-pdp4.c as6-pdp4.c
+	$(CC) $(CFLAGS) -DTARGET_PDP4 -DARCH32 -o aspdp4 $(CORE) as1-pdp4.c as6-pdp4.c
+
+ldpdp4: $(HDR) ld.c
+	$(CC) $(CFLAGS) -DARCH32 -o ldpdp4 ld.c
+
+nmpdp4: $(HDR) nm.c
+	$(CC) $(CFLAGS) -DARCH32 -o nmpdp4 nm.c
+
+osizepdp4: $(HDR) osize.c
+
+dumprelocspdp4: $(HDR) dumprelocs.c
+	$(CC) $(CFLAGS) -o dumprelocspdp4 dumprelocs.c
+
 aspe16: $(HDR) $(CORE) as1-pe16.c as6-pe16.c
 	$(CC) $(CFLAGS)  -DTARGET_PE16 -o aspe16 $(CORE) as1-pe16.c as6-pe16.c
 
@@ -427,4 +441,4 @@ installtest: test
 	cp ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600 $(CCROOT)/bin
 	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
 	cp aspe32 ldpe32 nmpe32 osizepe32 dumprelocspe32 $(CCROOT)/bin
-#	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin
+	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin

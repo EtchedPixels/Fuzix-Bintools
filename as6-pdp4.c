@@ -46,6 +46,9 @@ SYM	sym[] = {
 	{	0,	".literal",	TSEGMENT,	LITERAL	},
 	{	0,	".commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	".buffers",	TSEGMENT,	BUFFERS	},
+	{	0,	".index",	TMODE,		1	},
+	{	0,	".bank",	TMODE,		0	},
+	{	0,	".setcpu",	TSETCPU,	0	},
 
 	/* Memory ops : upper bits are the opcode */
 	{	0,	"cal",		TMEM,		0000000 },
@@ -76,7 +79,7 @@ SYM	sym[] = {
 	{	0,	"rar",		TIMPL,		0740020 },
 	{	0,	"rtr",		TIMPL,		0742020 },
 	{	0,	"oas",		TIMPL,		0740004 },
-	}	0,	"sma",		TIMPL,		0740100 },
+	{	0,	"sma",		TIMPL,		0740100 },
 	{	0,	"spa",		TIMPL,		0741100 },
 	{	0,	"sza",		TIMPL,		0740200 },
 	{	0,	"sna",		TIMPL,		0741200 },
@@ -119,7 +122,7 @@ SYM	sym[] = {
 	/* Card punch */
 	{	0,	"cpsf",		TIMPL,		0706401 },
 	{	0,	"cpcf",		TIMPL,		0706402 },
-	{	0,	"cplb",		TIMPL,		0706406 }
+	{	0,	"cplb",		TIMPL,		0706406 },
 	{	0,	"cpse",		TIMPL,		0706442 },
 	/* Line Printer - FIXME PDP4 doc is wrong ?*/
 	{	0,	"lpsf",		TIMPL,		0706501 },
@@ -393,11 +396,9 @@ char *etext[] = {
 	"segment overflow",
 	"segment conflict",
 	"divide by zero",
-	"autoindexing not permitted",
-	"branch out of range",
 	"out of range",
-	"invalid addressing mode",
-	"pointer required"
+	"wrong CPU",
+	"not in index mode",
 };
 
 /*

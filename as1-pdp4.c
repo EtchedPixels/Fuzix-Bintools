@@ -1,10 +1,42 @@
 /*
- * PDP15 assembler.
- * Assemble one line of input.
+ * PDP4/7/9/15 assembler.
+ *
+ * The 4/7/9/15 is a fairly regular 18bit machine. As we are building on non
+ * 18bit systems we work in 32bit words and then strip down to 18bit at the
+ * end.
+ *
+ * Memory addressing grows through time
+ * Initially the address is a 13bit address
+ * Later this becomes the low 13bits of the current "bank"
+ * When indexing was added index mode also permits this to be the low 12bits
+ * of an address and borrows a bit for index mode.
+ *
+ * We track things in bytes internally so all our address scaling is by 4 but
+ * we need to be careful about constants therefore
+ *
+ * TODO:
+ * import all nova scaling and make by 4
+ * import nova const handling for scaling
+ * teach linker about /4 word not just /2
+ * teach linker about 18bit 9/9 split for hi/lo or handle it with mask/scale ?
+ * custom link ops for page/bank mode
+ * immediate relocations and ld immediate merging
  */
 #include	"as.h"
 
-static int cputype = 4;
+static unsigned cputype;
+static unsigned index_mode;
+static unsigned last_width;
+static unsigned last_scale;
+
+static void reloc_width(unsigned w, unsigned s)
+{
+	if (last_width != w || last_scale != s) {
+		last_width = w;
+		last_scale = s;
+		outscale(s, w);
+	}
+}
 
 /*
  *	Set up for the start of each pass
@@ -13,6 +45,9 @@ int passbegin(int pass)
 {
 	cputype = 4;
 	segment = 1;		/* Default to code */
+	index_mode = 0;
+	last_scale = 0;		/* Force the reloc_width to issue */
+	reloc_width(18, 0);
 	/* We have no variable sized branches to fix up so
 	   we do not do pass 1 and 2 */
 	if (pass == 1 || pass == 2)
@@ -22,6 +57,77 @@ int passbegin(int pass)
 
 void doflush(void)
 {
+}
+
+static void outword(addr_t v)
+{
+	outab(v >> 24);
+	outab(v >> 16);
+	outab(v >> 8);
+	outab(v);
+}
+
+static void align4(void)
+{
+	while(dot[segment] & 3)
+		outab(0);
+}
+
+/* FIXME: this won't work instead we need custom reloc types for
+	BANK/INDEX - low bits are machine word offset upper fixed
+	overflow into other bank is error */
+void fix_constant(ADDR *a)
+{
+	/* Compensate for scaling of non constants as we work in bytespace */
+	if (a->a_segment == ABSOLUTE)
+		reloc_width(last_width, 0);
+	else
+		reloc_width(last_width, 2);
+	if (last_width == 12)
+		/* Work out what our page is */
+		/* TODO: we assume our segment started on a page. We will
+		   eventually turn this into relocs and do a linker implicits
+		   merge */
+		a->a_value -= dot[segment] & ~07777;
+	else  if (last_width == 13)
+		a->a_value -= dot[segment] & ~017777;
+}
+
+static void outrelword(ADDR *a)
+{
+	fix_constant(a);
+	reloc_width(18, 2);
+	outrad(a);
+}
+
+/* FIXME: set scale according to symbol or const */
+/* TODO: range checks */
+static void outraw_op(uint32_t opcode, ADDR *a1, unsigned mode)
+{
+	fix_constant(a1);
+	if (mode) {
+		reloc_width(12, 0);
+		a1->a_value &= 07777;
+		if (a1->a_type & TMINDIR)
+			a1->a_value |= 020000;
+		if ((a1->a_type & TMADDR) == TINDEX)
+			a1->a_value |= 010000;
+	} else {
+		reloc_width(13, 0);
+		a1->a_value &= 017777;
+		if (a1->a_type & TMINDIR)
+			a1->a_value |= 020000;
+		if ((a1->a_type & TMADDR) == TINDEX)
+			aerr(NOINDEX);
+	}
+	a1->a_value |= opcode;
+}
+
+/* Ditto for the 9bit offset forms */
+static void outraw_9bit(uint32_t opcode, ADDR *a1)
+{
+	reloc_width(9,0);
+	a1->a_value &= 0777;
 }
 
 /*
@@ -44,12 +150,15 @@ void getaddr(ADDR *ap)
 	/* A leading '*' means an indirect reference */
 	c = getnb();
 	if (c == '*')
-		ap->a_flags |= A_INDIRECT;
+		ap->a_type |= TMINDIR;
 
-	if (c == '<')
+#if 0
+	/* Will need custom handling if we bother */
+	else if (c == '<')
 		ap->a_flags |= A_LOW;
 	else if (c == '>')
 		ap->a_flags |= A_HIGH;
+#endif
 	else
 		unget(c);
 
@@ -59,15 +168,14 @@ void getaddr(ADDR *ap)
 	c = getnb();
 	/* Indexed ? */
 	if (c != ',') {
-		if (index_number) {
-			if (ap->a_value < 0 || ap->a_value > 03777)
-				aerr(MEM_RANGE);
-			ap->a_flags |= A_LOW12;
-		}
-		else {
+		if (index_mode) {
+			if (ap->a_value < 0 || ap->a_value > 01777)
+				aerr(RANGE);
+			ap->a_flags |= TUSER;
+		} else {
 			if (ap->a_value < 0 || ap->a_value > 07777)
-				aerr(MEM_RANGE);
-			ap->a_flags |= A_LOW13;
+				aerr(RANGE);
+			ap->a_type |= TUSER;
 		}
 		unget(c);
 		return;
@@ -82,8 +190,8 @@ void getaddr(ADDR *ap)
 	if (c != 'X' && c != 'x')
 		aerr(SYNTAX_ERROR);
 	if (ap->a_value < 0 || ap->a_value > 03777)
-		aerr(INDX_RANGE);
-	ap->a_flags |= TINDEX;
+		aerr(RANGE);
+	ap->a_flags |= TINDEX | TUSER;
 }
 
 static void constify(ADDR *ap)
@@ -103,14 +211,12 @@ void asmline(void)
 	SYM *sp;
 	int c;
 	int opcode;
-	int reg;
 	VALUE value;
 	int delim;
 	SYM *sp1;
 	char id[NCPS];
 	char id1[NCPS];
 	ADDR a1;
-	ADDR a2;
 
 loop:
 	if ((c=getnb())=='\n' || c==';')
@@ -174,7 +280,7 @@ loop:
 		if (a1.a_segment != ABSOLUTE)
 			qerr(MUST_BE_ABSOLUTE);
 		outsegment(ABSOLUTE);
-		dot[segment] = a1.a_value;
+		dot[segment] = a1.a_value * 4;	/* In words */
 		/* Tell the binary generator we've got a new absolute
 		   segment. */
 		outabsolute(a1.a_value);
@@ -198,9 +304,11 @@ loop:
 			getaddr(&a1);
 			constify(&a1);
 			istuser(&a1);
+			fix_constant(&a1);
 			outrab(&a1);
 		} while ((c=getnb()) == ',');
 		unget(c);
+		align4();
 		break;
 
 	case TDEFW:
@@ -208,7 +316,8 @@ loop:
 			getaddr(&a1);
 			constify(&a1);
 			istuser(&a1);
-			outraw(&a1);
+			fix_constant(&a1);
+			outrelword(&a1);
 		} while ((c=getnb()) == ',');
 		unget(c);
 		break;
@@ -221,6 +330,7 @@ loop:
 				qerr(MISSING_DELIMITER);
 			outab(c);
 		}
+		align4();
 		break;
 
 	case TDEFS:
@@ -229,7 +339,7 @@ loop:
 		istuser(&a1);
 		/* Write out the bytes. The BSS will deal with the rest */
 		for (value = 0 ; value < a1.a_value; value++)
-			outaw(0);
+			outword(0);
 		break;
 
 	case TSETCPU:
@@ -243,7 +353,7 @@ loop:
 		break;
 
 	case TMODE:
-		if (opcode && cpu < 15)	/*9 or 15 ? */
+		if (opcode && cputype < 15)	/* 9 or 15 ? */
 			aerr(WRONGCPU);
 		index_mode = opcode;
 		break;
@@ -251,21 +361,21 @@ loop:
 	case TIMPL7:
 		if (cputype < 7)
 			aerr(WRONGCPU);
-		outaw(opcode);
+		outword(opcode);
 		break;
 	case TIMPL9:
 		if (cputype < 9)
 			aerr(WRONGCPU);
-		outaw(opcode);
+		outword(opcode);
 		break;
 	case TIMPL15:
 		if (cputype < 15)
 			aerr(WRONGCPU);
-		outaw(opcode);
+		outword(opcode);
 		break;
 	case TIMPLE:	/* For now assume EAE */
 	case TIMPL:
-		outaw(opcode);
+		outword(opcode);
 		break;
 	case TMEM:
 		/* top 4 bits opcode, then indirect, indexed/banked, operand */
@@ -274,32 +384,25 @@ loop:
 		istuser(&a1);
 		/* We page align so nothing here is relocatable */
 		/* TODO: fix this to allow symbol low bits */
-		if (index_mode)
-			a1.a_value |= A_LOW12;
-		else
-			a1.a_value |= A_LOW13;
-		outraw_op(opcode, &a1);
+		outraw_op(opcode, &a1, index_mode);
 		break;
 	case TLAW:
 		/* Load negative constant */
 		getaddr(&a1);
 		constify(&a1);;
 		istuser(&a1);
-		a1.a_value |= A_LOW13;
-		outraw_op(opcode, &a1);
-		break;		
+		outraw_op(opcode, &a1, index_mode);
+		break;
 	case T9BIT:
 		/* Opcode with 9bit constant attached */
 		getaddr(&a1);
 		constify(&a1);
 		istuser(&a1);
 		if (a1.a_value < 0 || a1.a_value > 0777)
-			aerr(OPRANGE);
+			aerr(RANGE);
 		/* Lives in the low 9bits */
-		a1.a_value |= A_LOW;
 		outraw_9bit(opcode, &a1);
 		break;
-		
 	/* EAE */
 	case TEAE:
 	case TOPR:
