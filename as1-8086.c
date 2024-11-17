@@ -367,7 +367,7 @@ loop:
 	setsegment(0);
 	if ((c=getnb())=='\n' || c==';')
 		return;
-	if (isalpha(c) == 0 && c != '_' && c != '.')
+	if (is_symstart(c) == 0 && c != '.')
 		qerr(UNEXPECTED_CHR);
 	getid(id, c);
 	if ((c=getnb()) == ':') {

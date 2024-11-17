@@ -2534,6 +2534,7 @@ extern void uerr(char *);
 extern void aerr(uint8_t);
 extern void qerr(uint8_t);
 extern void storerror(int);
+extern int is_symstart(int c);
 extern void getid(char *, int);
 extern SYM *lookup(char *, SYM *[], int);
 extern int symeq(char *, char *);
