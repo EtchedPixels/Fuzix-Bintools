@@ -29,3 +29,8 @@ struct object {
 extern void warning(const char *p);
 extern void error(const char *p);
 extern unsigned io_readb(uint_fast8_t *ch);
+
+extern unsigned target_mod_simple(struct object *o, unsigned pcrel,
+    unsigned seg, unsigned size, unsigned high, unsigned overflow);
+extern unsigned target_mod_symrel(struct object *o, unsigned optype,
+    struct symbol *s, unsigned size, unsigned high, unsigned overflow);
