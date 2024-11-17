@@ -48,6 +48,7 @@ struct objhdr
 #define OA_CP1600	19	/* CP1600 */
 #define OA_PE32		20	/* Interdata/Perkin Elmer 32bit */
 #define OA_PDP4		21	/* PDP4/7/9/15 */
+#define OA_TMS7000	22	/* TMS7000 series */
     uint8_t o_flags;
 #define OF_BIGENDIAN	1
 #define OF_WORDMACHINE	2	/* 16bit word addressed */

@@ -2353,15 +2353,11 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define BADCPU		38
 #define NOAIDX		39
 
-
-#elif TARGET_316
-
-#define TARGET_WORD_MACHINE
-#define TARGET_BIGENDIAN
+#elif TARGET_TMS7000
 
 typedef	uint16_t	VALUE;		/* For symbol values */
 
-#define ARCH OA_H316
+#define ARCH OA_TMS7000
 #define ARCH_FLAGS OF_BIGENDIAN
 #define ARCH_CPUFLAGS 0
 
@@ -2381,16 +2377,18 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define	TMMODE	0xFF00			/* Mode */
 #define	TMINDIR	0x8000			/* Indirect flag in mode */
 #define TPUBLIC	0x0080			/* Exported symbol */
-
 #define TMADDR	0x00F0
 #define TINDEX	0x0010
-#define TINDIRECT 0x0020
+#define	TR	0x0020
+#define TPR	0x0030
 #define TIMMED	0x0040
+#define TIDXB	0x0050
+
 #define	TNEW	0x0000			/* Virgin */
 #define	TUSER	0x0100			/* User name */
 #define	TBR	0x0200			/* Byte register */
 #define	TWR	0x0300			/* Word register */
-#define	TSR	0x0400			/* Special register (I, R) */
+#define	TSR	0x0400			/* Special register (PC) */
 #define	TDEFB	0x0500			/* defb */
 #define	TDEFW	0x0600			/* defw */
 #define	TDEFS	0x0700			/* defs */
@@ -2401,20 +2399,28 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define	TENDC	0x0C00			/* end conditional */
 #define TSEGMENT 0x0D00			/* segments by number */
 #define TEXPORT 0x0E00			/* symbol export */
-#define	TSETFLAG	0x0F00			/* flag bits */
-#define	TCLRFLAG	0x1000			/* flag bits off */
-#define TXAC	0x1100			/* XAC */
-#define	TSETBASE	0x1200		/* .setb */
-#define TMR	0x1300			/* MR form */
-#define TMRHSA	0x1400			/* MR form, needs HSA */
-#define TMRX	0x1500			/* MR form with tag weirdness */
-#define TG	0x1600			/* G (implicit) form */
-#define TSH	0x1700			/* SH (shift) form */
-#define TIO	0x1800			/* IO form */
-#define TG5	0x1900			/* G form for 516 only */
-#define TGHSA	0x1A00			/* G form for HSA */
-#define	TCC	0x1B00			/* unused, needed for core */
-#define TLITMARK 0x1C00			/* space for literals */
+#define TCC	0x0F00
+/* CPU specific codes */
+#define TMOV	0x1000			/* Moves */
+#define TMULT	0x1100			/* Multi forms */
+#define TMULTO	0x1200			/* Multi + offset */
+#define TIND	0x1300			/* 3 op forms with indirect */
+#define TR3	0x1400			/* 3 op forms */
+#define TPP	0x1500			/* Push/pop */
+#define TR3O	0x1600			/* 3 op form with offset */
+#define TMOVP	0x1700			/* Movp is special */
+#define TFORM	0x1800			/* Other P forms */
+#define TFORMO	0x1900			/* P form with offset */
+#define TIMPL	0x1A00			/* Implicit forms */
+#define TJMP	0x1B00			/* Jump is special */
+#define TBRA	0x1C00			/* Conditional branching */
+#define TTRAP	0x1D00			/* Trap is special */
+#define TMOVD	0x1E00			/* Movd is special */
+#define TREL	0x1F00			/* JP */
+
+#define RA	0x00
+#define RB	0x01
+#define RST	0x02
 
 /*
  *	Error message numbers: FIXME - sort general first
@@ -2431,17 +2437,19 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define MUST_BE_ABSOLUTE	14
 #define MISSING_DELIMITER 15
 #define INVALID_CONST	16
-#define RANGE		17
-#define REQUIRE_FEATURE	18
-#define ADDR_REQUIRED	19
-#define INVALID_ID	20
-#define CONSTANT_RANGE  21
-#define DATA_IN_BSS	 22
-#define SEGMENT_OVERFLOW 23
-#define UNKNOWN_SYMBOL	24
-#define DIVIDE_BY_ZERO	25
-#define	SEGMENT_CLASH	26
-#define NOTINDEX	27
+#define ADDR_REQUIRED	17
+#define INVALID_ID	18
+#define BAD_MODE	19
+#define CONSTANT_RANGE  20
+#define DATA_IN_BSS	 21
+#define SEGMENT_OVERFLOW 22
+#define	SEGMENT_CLASH	23
+#define BRANCH_RANGE	24
+#define RANGE		25
+#define TOOMANYJCC	26
+#define DIVIDE_BY_ZERO	27
+#define REG_REQUIRED	28
+#define PREG_REQUIRED	29
 
 #else
 #error "Unknown target"
