@@ -2363,6 +2363,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 
 /* We generate intentionally wrapping 16bit maths for relocations */
 #define TARGET_RELOC_OVERFLOW_OK
+#define TARGET_BIGENDIAN
 
 /*
  * Types. These are used

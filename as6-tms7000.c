@@ -104,7 +104,7 @@ SYM	sym[] = {
 	{	0,	"pop",		TPP,		0xB9	},
 
 	/* Three form ops with offset */
-	{	0,	"djnz",		TR3O,		0x0A	},
+	{	0,	"djnz",		TR3O,		0xBA	},
 
 	/* P form ops */
 	/* MOVP has extra forms */

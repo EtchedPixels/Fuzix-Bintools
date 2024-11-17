@@ -244,11 +244,12 @@ void as_multop(unsigned opcode)
 	if ((a1.a_type & TMADDR) == TIMMED) {
 		if (IS_A(&a2)) {
 			outab(opcode + 0x20);
-			outrab(&a2);
+			outrab(&a1);
 		} else if (IS_B(&a2)) {
 			outab(opcode + 0x50);
-			outrab(&a2);
+			outrab(&a1);
 		} else {
+			/* TODO: check ordering */
 			outab(opcode + 0x70);
 			outrab(&a1);
 			outreg(&a2);
@@ -257,6 +258,11 @@ void as_multop(unsigned opcode)
 	}
 	if (IS_B(&a1) && IS_A(&a2)) {
 		outab(opcode + 0x60);
+		return;
+	}
+	/* Special form for MOV only */
+	if (opcode == 0x02 && IS_A(&a1) && IS_B(&a2)) {
+		outab(0xC0);
 		return;
 	}
 	if (IS_A(&a2) && (a1.a_type & TMADDR) == TR) {
@@ -269,19 +275,17 @@ void as_multop(unsigned opcode)
 		outreg(&a1);
 		return;
 	}
-	/* MOV has some extra forms */
-	if (opcode == 0x20) {
-		if (IS_A(&a1) && IS_B(&a2)) {
-			outab(0xC0);
-			return;
-		}
+	/* Other MOV special forms */
+	if (opcode == 0x02) {
 		if ((a2.a_type & TMADDR) == TR) {
 			if (IS_A(&a1))
 				outab(0xD0);
 			else if (IS_B(&a1))
 				outab(0xD1);
-			else
-				aerr(BAD_MODE);
+			else {
+				outab(opcode + 0x40);
+				outreg(&a1);
+			}
 			outreg(&a2);
 			return;
 		}
@@ -513,8 +517,6 @@ loop:
 		outab(opcode);
 		break;
 	case TMOV:
-		/* TODO */
-		
 		/* Extended multop */
 	case TMULT:
 		as_multop(opcode);
@@ -530,15 +532,15 @@ loop:
 		getaddr_i(&a1);
 		switch(a1.a_type & TMADDR) {
 		case TR:
-			outab(opcode + 0x10);
+			outab(opcode + 0x90);
 			outreg(&a1);
 			return;
 		case TIMMED:
-			outab(opcode);
+			outab(opcode + 0x80);
 			outraw(&a1);
 			return;
 		case TIDXB:
-			outab(opcode + 0x20);
+			outab(opcode + 0xA0);
 			outraw(&a1);
 			return;
 		}
