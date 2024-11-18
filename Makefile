@@ -305,6 +305,7 @@ nmpdp4: $(HDR) nm.c
 	$(CC) $(CFLAGS) -DARCH32 -o nmpdp4 nm.c
 
 osizepdp4: $(HDR) osize.c
+	$(CC) $(CFLAGS) -o osizepdp4 osize.c
 
 dumprelocspdp4: $(HDR) dumprelocs.c
 	$(CC) $(CFLAGS) -o dumprelocspdp4 dumprelocs.c

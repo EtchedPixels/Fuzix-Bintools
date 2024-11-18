@@ -2353,6 +2353,96 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define BADCPU		38
 #define NOAIDX		39
 
+#elif TARGET_316
+
+#define TARGET_WORD_MACHINE
+#define TARGET_BIGENDIAN
+
+typedef	uint16_t	VALUE;		/* For symbol values */
+
+#define ARCH OA_H316
+#define ARCH_FLAGS OF_BIGENDIAN
+#define ARCH_CPUFLAGS 0
+
+/* We generate intentionally wrapping 16bit maths for relocations */
+#define TARGET_RELOC_OVERFLOW_OK
+#define TARGET_BIGENDIAN
+
+/*
+ * Types. These are used
+ * in both symbols and in address
+ * descriptions. Observe the way the
+ * symbol flags hide in the register
+ * field of the address.
+ */
+#define	TMREG	0x000F			/* Register code */
+#define	TMMDF	0x0001			/* Multidef */
+#define	TMASG	0x0002			/* Defined by "=" */
+#define	TMMODE	0xFF00			/* Mode */
+#define	TMINDIR	0x8000			/* Indirect flag in mode */
+#define TPUBLIC	0x0080			/* Exported symbol */
+
+#define TMADDR	0x00F0
+#define TINDEX	0x0010
+#define TINDIRECT 0x0020
+#define TIMMED	0x0040
+#define	TNEW	0x0000			/* Virgin */
+#define	TUSER	0x0100			/* User name */
+#define	TBR	0x0200			/* Byte register */
+#define	TWR	0x0300			/* Word register */
+#define	TSR	0x0400			/* Special register (I, R) */
+#define	TDEFB	0x0500			/* defb */
+#define	TDEFW	0x0600			/* defw */
+#define	TDEFS	0x0700			/* defs */
+#define	TDEFM	0x0800			/* defm */
+#define	TORG	0x0900			/* org */
+#define	TEQU	0x0A00			/* equ */
+#define	TCOND	0x0B00			/* conditional */
+#define	TENDC	0x0C00			/* end conditional */
+#define TSEGMENT 0x0D00			/* segments by number */
+#define TEXPORT 0x0E00			/* symbol export */
+#define	TSETFLAG	0x0F00			/* flag bits */
+#define	TCLRFLAG	0x1000			/* flag bits off */
+#define TXAC	0x1100			/* XAC */
+#define	TSETBASE	0x1200		/* .setb */
+#define TMR	0x1300			/* MR form */
+#define TMRHSA	0x1400			/* MR form, needs HSA */
+#define TMRX	0x1500			/* MR form with tag weirdness */
+#define TG	0x1600			/* G (implicit) form */
+#define TSH	0x1700			/* SH (shift) form */
+#define TIO	0x1800			/* IO form */
+#define TG5	0x1900			/* G form for 516 only */
+#define TGHSA	0x1A00			/* G form for HSA */
+#define	TCC	0x1B00			/* unused, needed for core */
+#define TLITMARK 0x1C00			/* space for literals */
+
+/*
+ *	Error message numbers: FIXME - sort general first
+ */
+
+#define BRACKET_EXPECTED 1
+#define MISSING_COMMA	2
+#define SQUARE_EXPECTED 3
+#define PERCENT_EXPECTED 4
+#define UNEXPECTED_CHR	10
+#define PHASE_ERROR	11
+#define MULTIPLE_DEFS	12
+#define SYNTAX_ERROR	13
+#define MUST_BE_ABSOLUTE	14
+#define MISSING_DELIMITER 15
+#define INVALID_CONST	16
+#define RANGE		17
+#define REQUIRE_FEATURE	18
+#define ADDR_REQUIRED	19
+#define INVALID_ID	20
+#define CONSTANT_RANGE  21
+#define DATA_IN_BSS	 22
+#define SEGMENT_OVERFLOW 23
+#define UNKNOWN_SYMBOL	24
+#define DIVIDE_BY_ZERO	25
+#define	SEGMENT_CLASH	26
+#define NOTINDEX	27
+
 #elif TARGET_TMS7000
 
 typedef	uint16_t	VALUE;		/* For symbol values */
