@@ -122,7 +122,8 @@ static void getaddr_r(ADDR *ap)
 	if (c == 'r') {
 		getaddr(ap);
 		/* r%d */
-		/* TODO: check range ? */ 
+		if (ap->a_value > 255)
+			aerr(RANGE);
 		ap->a_type |= TR;
 		ap->a_segment = ZP;
 		return;
@@ -130,7 +131,8 @@ static void getaddr_r(ADDR *ap)
 	if (c == 'p') {
 		getaddr(ap);
 		/* p%d */
-		/* TODO: check range ? */
+		if (ap->a_value > 255)
+			aerr(RANGE);
 		ap->a_type = TPR;
 		return;
 	}
@@ -191,7 +193,8 @@ static void getaddr_i(ADDR *ap)
 		if (c2 == 'r') {
 			getaddr(ap);
 			/* r%d */
-			/* TODO: check range ? */ 
+			if (ap->a_value > 255)
+				aerr(RANGE);
 			ap->a_type |= TR | TBR;
 			ap->a_segment = ZP;
 			return;
