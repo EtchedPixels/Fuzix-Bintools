@@ -198,7 +198,7 @@ void asmline(void)
 loop:
 	if ((c=getnb())=='\n' || c==';')
 		return;
-	if (isalpha(c) == 0 && c != '_' && c != '.')
+	if (is_symstart(c) == 0 && c != '.')
 		qerr(UNEXPECTED_CHR);
 	getid(id, c);
 	if ((c=getnb()) == ':') {
@@ -432,16 +432,20 @@ loop:
 			istuser(&a1);
 			outraw(&a1);
 			break;
-		case TDIRECT:
-			outab(opcode + 0x10);
-			constify(&a1);
-			istuser(&a1);
-			outrab(&a1);
-			break;
 		case TINDEX:
 			outab(opcode + 0x20);
 			outab(a1.a_value);
 			break;
+		case TDIRECT:
+			/* JSR direct is HCF on 6800 so use the 16bit form */
+			if (cputype != 6800 || opcode != 0x8D) {
+				outab(opcode + 0x10);
+				constify(&a1);
+				istuser(&a1);
+				outrab(&a1);
+				break;
+			}
+			/* Fall through */
 		default:
 			/* An address */
 			outab(opcode + 0x30);

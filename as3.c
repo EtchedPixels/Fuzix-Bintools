@@ -239,7 +239,7 @@ void expr2(ADDR *ap)
 		expr3(ap, c);
 		return;
 	}
-	if (isalpha(c) || c == '_') {
+	if (is_symstart(c)) {
 		getid(id, c);
 		if ((sp=lookup(id, uhash, 0)) == NULL
 		&&  (sp=lookup(id, phash, 0)) == NULL)

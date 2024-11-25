@@ -88,6 +88,13 @@ void comma(void)
 		qerr(MISSING_COMMA);
 }
 
+int is_symstart(int c)
+{
+	if (c == '_' || isalpha(c) || (c & 0x80))
+		return 1;
+	return 0;
+}
+
 /*
  * Read identifier.
  * The character "c" is the first
@@ -99,7 +106,7 @@ void getid(char *id, int c)
 
 	if (c < 0) {
 		c = getnb();
-		if (isalpha(c) == 0 && c != '_' && c != '.')
+		if (is_symstart(c) == 0 && c != '.')
 			qerr(INVALID_ID);
 	}
 	p = &id[0];
@@ -109,7 +116,7 @@ void getid(char *id, int c)
 		}
 		if ((c = *ip) != '\n')
 			++ip;
-	} while (c=='\'' || isalnum(c)!=0 || c == '_');
+	} while (c=='\'' || isalnum(c)!=0 || c == '_' || (c & 0x80));
 	if (c != '\n')
 		--ip;
 	while (p < &id[NCPS])

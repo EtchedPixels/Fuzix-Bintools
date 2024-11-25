@@ -346,6 +346,8 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 			 type = TINDEXD;
 			 /* Dummy type to avoid cascading errors */
 	}
+	if (type != TINDEX)
+		ap->a_type = 0;
 
 	/* We can't just throw the right hand side at the expression
 	   parser because it's full of + and - but not an expression so
@@ -360,7 +362,7 @@ void getaddr_op(ADDR *ap, unsigned noreg)
 		}
 	}
 	/* now a register name or PC */
-	ap->a_type |= parse_register(c);
+	ap->a_type = parse_register(c);
 
 	c = getnb();
 	if (c == '+' && !hasleft && !predec && type == TINDEX) {
@@ -684,7 +686,7 @@ void asmline(void)
 loop:
 	if ((c=getnb())=='\n' || c==';')
 		return;
-	if (isalpha(c) == 0 && c != '_' && c != '.')
+	if (is_symstart(c) == 0 && c != '.')
 		qerr(UNEXPECTED_CHR);
 	getid(id, c);
 	if ((c=getnb()) == ':') {

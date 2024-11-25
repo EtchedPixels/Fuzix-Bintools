@@ -2353,7 +2353,6 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define BADCPU		38
 #define NOAIDX		39
 
-
 #elif TARGET_316
 
 #define TARGET_WORD_MACHINE
@@ -2367,6 +2366,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 
 /* We generate intentionally wrapping 16bit maths for relocations */
 #define TARGET_RELOC_OVERFLOW_OK
+#define TARGET_BIGENDIAN
 
 /*
  * Types. These are used
@@ -2442,6 +2442,105 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define DIVIDE_BY_ZERO	25
 #define	SEGMENT_CLASH	26
 #define NOTINDEX	27
+
+#elif TARGET_TMS7000
+
+typedef	uint16_t	VALUE;		/* For symbol values */
+
+#define ARCH OA_TMS7000
+#define ARCH_FLAGS OF_BIGENDIAN
+#define ARCH_CPUFLAGS 0
+
+/* We generate intentionally wrapping 16bit maths for relocations */
+#define TARGET_RELOC_OVERFLOW_OK
+#define TARGET_BIGENDIAN
+
+/*
+ * Types. These are used
+ * in both symbols and in address
+ * descriptions. Observe the way the
+ * symbol flags hide in the register
+ * field of the address.
+ */
+#define	TMREG	0x000F			/* Register code */
+#define	TMMDF	0x0001			/* Multidef */
+#define	TMASG	0x0002			/* Defined by "=" */
+#define	TMMODE	0xFF00			/* Mode */
+#define	TMINDIR	0x8000			/* Indirect flag in mode */
+#define TPUBLIC	0x0080			/* Exported symbol */
+#define TMADDR	0x00F0
+#define TINDEX	0x0010
+#define	TR	0x0020
+#define TPR	0x0030
+#define TIMMED	0x0040
+#define TIDXB	0x0050
+
+#define	TNEW	0x0000			/* Virgin */
+#define	TUSER	0x0100			/* User name */
+#define	TBR	0x0200			/* Byte register */
+#define	TWR	0x0300			/* Word register */
+#define	TSR	0x0400			/* Special register (PC) */
+#define	TDEFB	0x0500			/* defb */
+#define	TDEFW	0x0600			/* defw */
+#define	TDEFS	0x0700			/* defs */
+#define	TDEFM	0x0800			/* defm */
+#define	TORG	0x0900			/* org */
+#define	TEQU	0x0A00			/* equ */
+#define	TCOND	0x0B00			/* conditional */
+#define	TENDC	0x0C00			/* end conditional */
+#define TSEGMENT 0x0D00			/* segments by number */
+#define TEXPORT 0x0E00			/* symbol export */
+#define TCC	0x0F00
+/* CPU specific codes */
+#define TMOV	0x1000			/* Moves */
+#define TMULT	0x1100			/* Multi forms */
+#define TMULTO	0x1200			/* Multi + offset */
+#define TIND	0x1300			/* 3 op forms with indirect */
+#define TR3	0x1400			/* 3 op forms */
+#define TPP	0x1500			/* Push/pop */
+#define TR3O	0x1600			/* 3 op form with offset */
+#define TMOVP	0x1700			/* Movp is special */
+#define TFORM	0x1800			/* Other P forms */
+#define TFORMO	0x1900			/* P form with offset */
+#define TIMPL	0x1A00			/* Implicit forms */
+#define TJMP	0x1B00			/* Jump is special */
+#define TBRA	0x1C00			/* Conditional branching */
+#define TTRAP	0x1D00			/* Trap is special */
+#define TMOVD	0x1E00			/* Movd is special */
+#define TREL	0x1F00			/* JP */
+
+#define RA	0x00
+#define RB	0x01
+#define RST	0x02
+
+/*
+ *	Error message numbers: FIXME - sort general first
+ */
+
+#define BRACKET_EXPECTED 1
+#define MISSING_COMMA	2
+#define SQUARE_EXPECTED 3
+#define PERCENT_EXPECTED 4
+#define UNEXPECTED_CHR	10
+#define PHASE_ERROR	11
+#define MULTIPLE_DEFS	12
+#define SYNTAX_ERROR	13
+#define MUST_BE_ABSOLUTE	14
+#define MISSING_DELIMITER 15
+#define INVALID_CONST	16
+#define ADDR_REQUIRED	17
+#define INVALID_ID	18
+#define BAD_MODE	19
+#define CONSTANT_RANGE  20
+#define DATA_IN_BSS	 21
+#define SEGMENT_OVERFLOW 22
+#define	SEGMENT_CLASH	23
+#define BRANCH_RANGE	24
+#define RANGE		25
+#define TOOMANYJCC	26
+#define DIVIDE_BY_ZERO	27
+#define REG_REQUIRED	28
+#define PREG_REQUIRED	29
 
 #else
 #error "Unknown target"
@@ -2534,6 +2633,7 @@ extern void uerr(char *);
 extern void aerr(uint8_t);
 extern void qerr(uint8_t);
 extern void storerror(int);
+extern int is_symstart(int c);
 extern void getid(char *, int);
 extern SYM *lookup(char *, SYM *[], int);
 extern int symeq(char *, char *);

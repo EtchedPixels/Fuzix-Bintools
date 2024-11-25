@@ -533,10 +533,10 @@ static void write_symbols(FILE *fp)
 			fwrite(s->name, NAMELEN, 1, fp);
 			fputc(s->value, fp);
 			fputc(s->value >> 8, fp);
-#ifdef ARCH32			
+#ifdef ARCH32
 			fputc(s->value >> 16, fp);
 			fputc(s->value >> 24, fp);
-#endif			
+#endif
 		}
 	}
 }
@@ -560,9 +560,9 @@ static void print_symbol(register struct symbol *s, FILE *fp)
 	}
 #ifdef ARCH32
 	fprintf(fp, "%08X %c %.*s\n", s->value, c, NAMELEN, s->name);
-#else	
+#else
 	fprintf(fp, "%04X %c %.*s\n", s->value, c, NAMELEN, s->name);
-#endif	
+#endif
 }
 
 /*
@@ -944,7 +944,7 @@ static addr_t target_get(struct object *o, uint16_t size)
 		}
 	} else {
 		unsigned s = 0;
-		while(size--) { 
+		while(size--) {
 			v |= target_pgetb() << s;
 			s += 8;
 		}
@@ -975,7 +975,7 @@ static void record_reloc(struct object *o, unsigned high, unsigned size, unsigne
 #ifndef ARCH32
 	if (size == 2 && !(o->oh->o_flags & OF_BIGENDIAN))
 		addr++;
-#endif		
+#endif
 	if (seg == ZP) {
 		fputc(0, relocf);
 		fputc(0, relocf);
@@ -992,11 +992,11 @@ static void record_reloc(struct object *o, unsigned high, unsigned size, unsigne
 	fputc((addr >> 16), relocf);
 	fputc((addr >> 8), relocf);
 	fputc(addr, relocf);
-#else	
+#else
 	fputc(1, relocf);
 	fputc((addr >> 8), relocf);
 	fputc(addr, relocf);
-#endif	
+#endif
 }
 
 static unsigned is_code(unsigned seg)
@@ -1034,10 +1034,11 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 		uint_fast8_t high = 0;
 		uint_fast8_t pcrel = 0;
 
-//		if (ldmode == LD_ABSOLUTE && ftell(op) != dot) {
-//			fprintf(stderr, "%ld not %d\n",
-//				(long)ftell(op), dot);
-//		}
+/*		if (ldmode == LD_ABSOLUTE && ftell(op) != dot) {
+ *			fprintf(stderr, "%ld not %d\n",
+ *				(long)ftell(op), dot);
+ *		}
+ */
 
 		/* Unescaped material is just copied over */
 		if (code != REL_ESC) {
@@ -1148,6 +1149,13 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 					fputc(REL_HIGH, op);
 				fputc(code, op);
 			}
+#ifdef TARGET_RELOC
+			if (target_mod_simple(o, pcrel, seg, size, high, overflow)) {
+				dot += size;
+				/* Target helper owns recording decisions */
+				continue;
+			} else
+#endif
 			if (pcrel) {
 				r = target_get(o, size);
 				r += o->base[seg];
@@ -1180,8 +1188,8 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 				/* Relocate the value versus the new segment base and offset of the
 				   object */
 				r = target_get(o, size);
-				//			fprintf(stderr, "Target is %x, Segment %d base is %x\n",
-				//				r, seg, o->base[seg]);
+				/*			fprintf(stderr, "Target is %x, Segment %d base is %x\n",
+								r, seg, o->base[seg]); */
 				r += o->base[seg];
 				/* TODO: Should do reloc fitting for bigger sizes on ARCH32 ? */
 				if (overflow && (r < o->base[seg] || (size == 1 && r > 255))) {
@@ -1251,6 +1259,12 @@ static void relocate_stream(struct object *o, int segment, FILE * op)
 						fputc(tmp, op);
 					}
 				} else {
+#ifdef TARGET_RELOC
+					if (target_mod_symrel(o, optype, s, size, high, overflow)) {
+						dot += size;
+						break;
+					}
+#endif
 					/* Get the relocation data */
 					r = target_get(o, optype == REL_PCREL ? MAXSIZE : size);
 					/* Add the offset from the output segment base to the
