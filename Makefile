@@ -13,6 +13,7 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
      asz8 ldz8 nmz8 osizez8 dumprelocsz8 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
+     binify flexfs \
      reloc template
 
 test: as316 ld316 nm316 osize316 dumprelocs316 \
@@ -383,6 +384,12 @@ osizez80: $(HDR) osize.c
 dumprelocsz80: $(HDR) dumprelocs.c
 	$(CC) $(CFLAGS) -o dumprelocsz80 dumprelocs.c
 
+binify: binify.c
+	$(CC) $(CFLAGS) -o binify binify.c
+
+flexfs: flexfs.h flexfs.c
+	$(CC) $(CFLAGS) -o flexfs flexfs.c
+
 clean:
 	rm -f *.o *~
 	rm -f as1802 ld1802 nm1802 osize1802 dumprelocs1802
@@ -408,6 +415,7 @@ clean:
 	rm -f assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8
 	rm -f asz8 ldz8 nmz8 osizez8 dumprelocsz8
 	rm -f asz80 ldz80 nmz80 osizez80 dumprelocsz80
+	rm -f binify flexfs
 	rm -f reloc
 
 # FIXME: allow root specification
@@ -429,6 +437,7 @@ install: all
 	cp asz80 ldz80 nmz80 osizez80 dumprelocsz80 $(CCROOT)/bin
 	cp asgb ldgb nmgb osizegb dumprelocsgb $(CCROOT)/bin
 	cp assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 $(CCROOT)/bin
+	cp binify flexfs  $(CCROOT)/bin
 	cp reloc $(CCROOT)/bin/relocz80
 	cp template $(CCROOT)/bin/template
 
@@ -442,3 +451,6 @@ installtest: test
 	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
 	cp aspe32 ldpe32 nmpe32 osizepe32 dumprelocspe32 $(CCROOT)/bin
 	cp aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 $(CCROOT)/bin
+	cp binify flexfs  $(CCROOT)/bin
+
+
