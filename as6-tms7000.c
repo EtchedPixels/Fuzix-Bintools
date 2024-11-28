@@ -27,7 +27,7 @@ SYM	sym[] = {
 	{	0,	"export",	TEXPORT,	XXXX	},
 	{	0,	".byte",	TDEFB,		XXXX	},
 	{	0,	".word",	TDEFW,		XXXX	},
-	{	0,	".blkb",	TDEFS,		XXXX	},
+	{	0,	".ds",		TDEFS,		XXXX	},
 	{	0,	".ascii",	TDEFM,		XXXX	},
 	{	0,	".org",		TORG,		XXXX	},
 	{	0,	".equ",		TEQU,		XXXX	},
