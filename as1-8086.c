@@ -8,9 +8,6 @@
  * 8bit offsets for outmod 0x40 should be relocable in theory ?
  * Object header setup for 186 instruction use
  * Full segmented link support
- * 80186:
- *	mul/div const
- *	shift forms
  * Don't allow erroneous xchg reg,immediate and other invalid forms
  */
 #include	"as.h"

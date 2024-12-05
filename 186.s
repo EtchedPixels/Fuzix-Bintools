@@ -37,6 +37,8 @@
 	adc ax,ss:[fred]
 	adc [fred],ax
 	adc [fred],1
+	adc byte [fred],1
+	adc word [fred],1
 	adc al,1
 	adc bl,4
 	adc al,bl
@@ -100,7 +102,9 @@
 	idiv bx
 	idiv [fred]
 	imul cx
+	imul ax,cx
 	imul [fred]
+	imul ax,[fred]
 	in ax,3
 	in ax,dx
 	in al,5
@@ -159,7 +163,9 @@ foo:
 	loope foo
 	loopne foo
 	mov es,ax
+	mov bp,sp
 	mov ax,ds
+	mov ax,bx
 	mov ax,11
 	mov al,12
 	mov ah,10
@@ -216,6 +222,7 @@ foo:
 	retf 12
 	rol ax
 	ror dl
+	ror dl,cl
 	sahf
 	sal cl
 	sar bx
@@ -287,3 +294,5 @@ foo:
 	outsw
 	popa
 	pusha
+	ror al,5
+	imul ax,3
