@@ -67,6 +67,7 @@
 	call fred
 	call ds:fred
 	call [bx]
+	call 10:fred
 ;	callf
 	cbw
 	clc
@@ -141,6 +142,7 @@ fred:
 	jmp fred
 	jmp eric
 	jmp [bx]	;need to fix the jmp handling to not use TJCC
+	jmp 0xFFFF:0x0000
 ;	jmpf fred
 	lahf
 	lds [fred]

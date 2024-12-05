@@ -527,8 +527,22 @@ loop:
 		outraw(&a1);
 		break;
 
+	/* TODO: support callf and 32bit addressing relocs with segments
+	   at some point in the future. Will also need to handle indirect
+	   intersegment call format */
 	case TCALL:
 		getaddr_mem(&a1, &mod1);
+		c = getnb();
+		if (c == ':') {
+			if ((a1.a_type & TMADDR) != TIMMED)
+				aerr(BADMODE);
+			getaddr_mem(&a2, &mod2);
+			outab(0x9A);
+			outmod(mod2, &a2);
+			outraw(&a1);
+			break;
+		}
+		unget(c);
 		ta1 = a1.a_type & TMMODE;
 		segprefix();
 		if ((a1.a_type & TMADDR) == TMODRM) {
@@ -554,8 +568,22 @@ loop:
 		outab(disp);
 		break;
 
+	/* TODO: support jmpf and 32bit addressing relocs with segments
+	   at some point in the future. Will also need to handle indirect
+	   intersegment call format */
 	case TJMP:
 		getaddr_mem(&a1, &mod1);
+		c = getnb();
+		if (c == ':') {
+			if ((a1.a_type & TMADDR) != TIMMED)
+				aerr(BADMODE);
+			getaddr_mem(&a2, &mod2);
+			outab(0xEA);
+			outmod(mod2, &a2);
+			outraw(&a1);
+			break;
+		}
+		unget(c);
 		ta1 = a1.a_type & TMMODE;
 		segprefix();
 		if ((a1.a_type & TMADDR) == TMODRM) {
