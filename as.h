@@ -2204,6 +2204,7 @@ typedef	uint16_t	VALUE;		/* For symbol values */
 #define BREGONLY	31
 #define SREGONLY	32
 #define RANGE		33
+#define BADSIZE		34
 
 #elif TARGET_EE200
 

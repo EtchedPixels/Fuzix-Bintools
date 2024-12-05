@@ -1,7 +1,17 @@
 /*
  * 8086 assembler.
  * Assemble one line of input.
- * Knows all the dirt.
+ *
+ * TODO
+ * Sort out handling of unresolved symbols and size
+ * Make use of "byte" and "word" more robust for error checking
+ * 8bit offsets for outmod 0x40 should be relocable in theory ?
+ * Object header setup for 186 instruction use
+ * Full segmented link support
+ * 80186:
+ *	mul/div const
+ *	shift forms
+ * Don't allow erroneous xchg reg,immediate and other invalid forms
  */
 #include	"as.h"
 
@@ -209,10 +219,43 @@ static unsigned make_modrm(ADDR *ap, unsigned r1, unsigned r2)
 	return modrm;
 }
 
-/* TODO: byte/word hints */
+/* Track byte/word hinting */
+static unsigned size_op = 0;
+
+static void set_opsize(unsigned n)
+{
+	if (size_op)
+		aerr(SYNTAX_ERROR);
+	size_op = n;
+}
+
+static unsigned check3(const char *p)
+{
+	unsigned c = getnb();
+	unsigned c2, c3;
+	if (c != *p) {
+		unget(c);
+		return 0;
+	}
+	c2 = getnb();
+	if (c2 != p[1]) {
+		unget(c2);
+		unget(c);
+		return 0;
+	}
+	c3 = getnb();
+	if (c3 != p[2]) {
+		unget(c3);
+		unget(c2);
+		unget(c);
+		return 0;
+	}
+	return 1;
+}
+	
 void getaddr_mem(ADDR *ap, unsigned *modrm)
 {
-	int c;
+	int c, nc, nc2;
 	unsigned mem = 0;
 	unsigned mod = 0;
 	unsigned r1 = 0, r2 = 0;
@@ -224,8 +267,8 @@ void getaddr_mem(ADDR *ap, unsigned *modrm)
 	c = getnb();
 	
 	if (c == 'c' || c == 'd' || c == 'e' || c == 's') {
-		int nc = getnb();
-		int nc2 = getnb();
+		nc = getnb();
+		nc2 = getnb();
 		if (nc != 's' || nc2 != ':') {
 			unget(nc2);
 			unget(nc);
@@ -233,6 +276,14 @@ void getaddr_mem(ADDR *ap, unsigned *modrm)
 			setsegment(c);
 			c = getnb();
 		}
+	}
+	if (c == 'w' && check3("ord")) {
+		set_opsize(2);
+		c = getnb();
+	}
+	if (c == 'b' && check3("yte")) {
+		set_opsize(1);
+		c = getnb();
 	}
 	if (c == '[') {
 		mem = 1;
@@ -322,16 +373,24 @@ static void outmod(unsigned modrm, ADDR *ap)
 	}
 }
 
-static unsigned opsize(unsigned modrm, ADDR *ap)
+static unsigned opsize(ADDR *ap)
 {
+	unsigned s = 0;
 	if ((ap->a_type & TMMODE) == TWR)
-		return 1;	/* word */
-	if ((ap->a_type & TMMODE) == TBR)
-		return 0;	/* byte */
+		s = 2;	/* word */
+	else if ((ap->a_type & TMMODE) == TBR)
+		s = 1;	/* byte */
 	if ((ap->a_type & TMMODE) == TSR)
-		return 1;	/* segment reg */
-	/* TODO byte/word overrides */
-	return 0;
+		s = 2;	/* segment reg */
+	/* Byte/word overrides */
+	if (s && size_op != s)
+		aerr(BADSIZE);
+	if (s == 0) {
+		if (size_op)
+			return size_op - 1;
+		return 0;
+	}
+	return s - 1;
 }
 
 static void need_186(void)
@@ -365,6 +424,8 @@ void asmline(void)
 
 loop:
 	setsegment(0);
+	size_op = 0;
+
 	if ((c=getnb())=='\n' || c==';')
 		return;
 	if (is_symstart(c) == 0 && c != '.')
@@ -664,14 +725,25 @@ loop:
 	case TPUSH:
 		getaddr_mem(&a1, &mod1);
 		ta1 = a1.a_type & TMMODE;
+		if ((a1.a_type & TMADDR) == TIMMED) {
+			/* 186 has PUSH [byte] immed */
+			need_186();
+			if (opsize(&a1)) {
+				outab(0x6A);
+				outraw(&a1);
+			} else {
+				outab(0x68);
+				outrab(&a1);
+			}
+			break;
+		}
+				
 		if ((a1.a_type & TMADDR) == TMODRM) {
-			/* Only an address is permitted TODO: 186 const */
 			if (mod1 != 0x06)
 				aerr(BADMODE);
 			segprefix();
 			outab(0xFF);
 			outab(mod1 | 0x30);
-			/* FIXME raw or relraw */
 			outraw(&a1);
 			break;
 		} else {
@@ -694,7 +766,6 @@ loop:
 			segprefix();
 			outab(0x8F);
 			outab(mod1 | 0x30);
-			/* FIXME raw or relraw */
 			outraw(&a1);
 			break;
 		} else {
@@ -819,7 +890,7 @@ loop:
 		/* Long forms of all */
 		if ((a1.a_type & TMADDR) == TMODRM) {
 			segprefix();
-			outab((opcode >> 8) | opsize(mod1, &a1));
+			outab((opcode >> 8) | opsize(&a1));
 			mod1 |= opcode & 0xFF;
 			outmod(mod1, &a1);
 			break;
@@ -852,17 +923,43 @@ loop:
 	case TDIV:
 	case TMUL:
 		getaddr_mem(&a1, &mod1);
+		c = getnb();
+		/* Allow use of AX,.. form as well as implied AX */
+		if (c == ',') {
+			if (a1.a_type != (TWR|AX) && a1.a_type != (TBR|AL))
+				aerr(BADMODE);
+			ta2 = a1.a_type & TMMODE;	/* Save type info */
+			getaddr_mem(&a1, &mod1);
+		} else {
+			ta2 = 0;
+			unget(c);
+		}
 		segprefix();
-		/* TODO 186 const form */
-		/* TODO size detection for mem form */
+		/* 186 has imul by const but only imul by const */
+		if ((a1.a_type & TMADDR) == TIMMED && opcode == 0xF628) {
+			need_186();
+			/* TODO: auto size immediates and S bit */
+			if (opsize(&a1)) {
+				outab(0x69);
+				outraw(&a1);
+			} else {
+				outab(0x6B);
+				outrab(&a1);
+			}
+			break;
+		}
 		if ((a1.a_type & TMMODE) == TWR) {
 			/* Word sized */
+			if (ta2 == TBR)
+				aerr(BADSIZE);
 			outab((opcode >> 8) | 1);
 			mod1 = 0xC0 | (opcode & 0xFF) | (a1.a_type & TMREG);
 			outmod(mod1, &a1);
 			break;
 		}
 		if ((a1.a_type & TMMODE)== TBR) {
+			if (ta2 == TWR)
+				aerr(BADSIZE);
 			/* Byte sized */
 			outab(opcode >> 8);
 			mod1 = 0xC0 | (opcode & 0xFF) | (a1.a_type & TMREG);
@@ -871,31 +968,49 @@ loop:
 		}
 		if ((a1.a_type & TMADDR) != TMODRM)
 			aerr(BADMODE);
-		/* TODO size handling */
 		outab(opcode >> 8);
+		opcode |= opsize(&a1);
 		outmod(mod1, &a1);
 		break;
 	case TSHIFT:
-		/* TODO: 186 forms */
 		getaddr_mem(&a1, &mod1);
+		c = getnb();
+		ta2 = 0;
+		if (c == ',') {
+			getaddr_mem(&a2, &mod1);
+			ta2 = a2.a_type & TMADDR;
+			if (a2.a_type == (TBR|CL)) {
+				opcode |= 0x0200;
+			} else if ((a2.a_type & TMADDR) == TIMMED) {
+				need_186();
+				opcode &= ~0x1000;
+			} else
+				aerr(BADMODE);
+		} else
+			unget(c);
 		segprefix();
 		if ((a1.a_type & TMMODE) == TWR) {
 			mod1 = 0xC0 | opcode | (a1.a_type & TMREG);
 			outab((opcode >> 8) | 1);
 			outmod(mod1, &a1);
+			if (!(opcode & 0x1000))
+				outrab(&a2);
 			break;
 		}
 		if ((a1.a_type & TMMODE) == TBR) {
 			mod1 = 0xC0 | opcode | (a1.a_type & TMREG);
 			outab(opcode >> 8);
 			outmod(mod1, &a1);
+			if (!(opcode & 0x1000))
+				outrab(&a2);
 			break;
 		}
 		if ((a1.a_type & TMADDR) != TMODRM)
 			aerr(BADMODE);
-		/* TODO size handling */
-		outab(opcode >> 8);
+		outab((opcode >> 8) | opsize(&a1));
 		outmod(mod1, &a1);
+		if (!(opcode & 0x1000))
+			outrab(&a2);
 		break;
 	case TMEM:
 		/* These instructions have 3 forms (with 2 sizes) */
@@ -929,7 +1044,6 @@ loop:
 			break;
 		}
 		if (ta1 == TBR && a2.a_type == (TUSER|TIMMED)) {
-			/* FIXME: S bit ? */
 			outab(0x80);
 			mod1 =  0xC0 | (opcode & 0x38) | (a1.a_type & TMREG);
 			outmod(mod1, &a1);
@@ -938,28 +1052,31 @@ loop:
 		}
 		/* mem, immed */
 		if (a2.a_type == (TIMMED|TUSER) && (a1.a_type & TMADDR) == TMODRM) {
-			/* TODO: sizing, S bit */
-			outab(0x80);
+			outab(0x80 | opsize(&a1));
 			mod1 |= opcode & 0x38;
 			outmod(mod1, &a1);
-			outrab(&a2);
+			if (opsize(&a1))
+				outraw(&a2);
+			else
+				outrab(&a2);
 			break;
 		}
-		if (ta1 == TWR && (a2.a_type & TMADDR) == TMODRM) {
+		/* Use the canonical direction of encoding */
+		if (ta1 == TWR && ta2 == TWR) {
 			outab(opcode | 1);
-			mod2 |= (a1.a_type & TMREG) << 3;
-			outmod(mod2, &a2);
+			mod1 = 0xC0 | (a2.a_type & TMREG) | ((a1.a_type & TMREG)<< 3);
+			outmod(mod1, &a1);
 			break;
 		}
 		if (ta2 == TWR && (a1.a_type & TMADDR) == TMODRM) {
-			outab(opcode | 3);
+			outab(opcode | 1);
 			mod1 |= (a2.a_type & TMREG) << 3;
 			outmod(mod1, &a1);
 			break;
 		}
-		if (ta1 == TWR && ta2 == TWR) {
-			outab(opcode | 1);
-			mod2 = 0xC0 | (a1.a_type & TMREG) | ((a2.a_type & TMREG)<< 3);
+		if (ta1 == TWR && (a2.a_type & TMADDR) == TMODRM) {
+			outab(opcode | 3);
+			mod2 |= (a1.a_type & TMREG) << 3;
 			outmod(mod2, &a2);
 			break;
 		}
@@ -1030,11 +1147,13 @@ loop:
 			outrab(&a2);
 			break;
 		}
-		/* TODO immediate load to memory ..sizing */
 		if ((a1.a_type & TMADDR) == TMODRM && a2.a_type == (TIMMED|TUSER)) {
-			outab(0xC6);	/* C7 for word */
+			outab(0xC6 | opsize(&a1));/* C7 for word */
 			outmod(mod1, &a1);
-			outraw(&a2);
+			if (opsize(&a1))
+				outraw(&a2);
+			else
+				outrab(&a2);
 			break;
 		}
 		/* AX and AL short forms */
@@ -1062,14 +1181,14 @@ loop:
 		/* Reg to/from memory/reg modrm forms */
 		if (ta1 == TWR && ta2 == TWR) {
 			mod2 |= (a1.a_type & TMREG) << 3;
-			outab(0x89);
+			outab(0x8B);
 			outmod(mod2, &a2);
 			break;
 		}
 		/* Reg to/from memory/reg modrm forms */
 		if (ta1 == TBR && ta2 == TBR) {
 			mod2 |= (a1.a_type & TMREG) << 3;
-			outab(0x88);
+			outab(0x8A);
 			outmod(mod2, &a2);
 			break;
 		}

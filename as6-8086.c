@@ -22,7 +22,7 @@ SYM	sym[] = {
 	{	0,	"export",	TEXPORT,	XXXX	},
 	{	0,	".byte",	TDEFB,		XXXX	},
 	{	0,	".word",	TDEFW,		XXXX	},
-	{	0,	".blkb",	TDEFS,		XXXX	},
+	{	0,	".ds",		TDEFS,		XXXX	},
 	{	0,	".ascii",	TDEFM,		XXXX	},
 	{	0,	".org",		TORG,		XXXX	},
 	{	0,	".equ",		TEQU,		XXXX	},
@@ -260,11 +260,12 @@ char *etext[] = {
 	"80816 instruction",		/* 26 */
 	"segment conflict",		/* 27 */
 	"too many jcc",			/* 28 */
-	"register only"			/* 29 */
-	"word register only"		/* 30 */
-	"byte register only"		/* 31 */
-	"segment register only"		/* 32 */
-	"out of range"			/* 33 */
+	"register only",		/* 29 */
+	"word register only",		/* 30 */
+	"byte register only",		/* 31 */
+	"segment register only",	/* 32 */
+	"out of range",			/* 33 */
+	"bad size",			/* 34 */
 };
 
 /*
