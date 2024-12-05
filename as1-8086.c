@@ -1060,6 +1060,19 @@ loop:
 			break;
 		}
 		/* Reg to/from memory/reg modrm forms */
+		if (ta1 == TWR && ta2 == TWR) {
+			mod2 |= (a1.a_type & TMREG) << 3;
+			outab(0x89);
+			outmod(mod2, &a2);
+			break;
+		}
+		/* Reg to/from memory/reg modrm forms */
+		if (ta1 == TBR && ta2 == TBR) {
+			mod2 |= (a1.a_type & TMREG) << 3;
+			outab(0x88);
+			outmod(mod2, &a2);
+			break;
+		}
 		if (ta1 == TWR && (a2.a_type & TMADDR) == TMODRM) {
 			outab(0x89);
 			mod2 |= (a1.a_type & TMREG) << 3;
