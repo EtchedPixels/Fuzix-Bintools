@@ -14,7 +14,7 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 \
      asz8 ldz8 nmz8 osizez8 dumprelocsz8 \
      asz80 ldz80 nmz80 osizez80 dumprelocsz80 \
-     reloc template
+     reloc template Tools
 
 test: as316 ld316 nm316 osize316 dumprelocs316 \
       as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
@@ -26,6 +26,8 @@ test: as316 ld316 nm316 osize316 dumprelocs316 \
       aspe32 ldpe32 nmpe32 osizepe32 dumprelocspe32
 
 todo: as8096 ld8096 nm8096 osize8096 dumprelocs8096
+
+.PHONY: Tools
 
 CCROOT ?=/opt/fcc/
 
@@ -400,6 +402,9 @@ osizez80: $(HDR) osize.c
 dumprelocsz80: $(HDR) dumprelocs.c
 	$(CC) $(CFLAGS) -o dumprelocsz80 dumprelocs.c
 
+Tools:
+	(cd Tools; make)
+
 clean:
 	rm -f *.o *~
 	rm -f as1802 ld1802 nm1802 osize1802 dumprelocs1802
@@ -427,6 +432,7 @@ clean:
 	rm -f asz8 ldz8 nmz8 osizez8 dumprelocsz8
 	rm -f asz80 ldz80 nmz80 osizez80 dumprelocsz80
 	rm -f reloc
+	(cd Tools; make clean)
 
 # FIXME: allow root specification
 
@@ -450,6 +456,9 @@ install: all
 	cp assuper8 ldsuper8 nmsuper8 osizesuper8 dumprelocssuper8 $(CCROOT)/bin
 	cp reloc $(CCROOT)/bin/relocz80
 	cp template $(CCROOT)/bin/template
+	cp Tools/Flex/binify $(CCROOT)/bin/flex-binify
+	cp Tools/Flex/flexfs $(CCROOT)/bin/flex-fs
+	cp Tools/MC10/tapeify $(CCROOT)/bin/mc10-tapeify
 
 installtest: test
 	mkdir -p $(CCROOT)/bin
