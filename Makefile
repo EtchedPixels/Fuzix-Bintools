@@ -5,6 +5,7 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
      as6809 ld6809 nm6809 osize6809 dumprelocs6809 \
      as7000 ld7000 nm7000 osize7000 dumprelocs7000 \
      as8008 ld8008 nm8008 osize8008 dumprelocs8008 \
+     as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
      as8080 ld8080 nm8080 osize8080 dumprelocs8080 \
      as9900 ld9900 nm9900 osize9900 dumprelocs9900 \
      asee200 ldee200 nmee200 osizeee200 dumprelocsee200 \
@@ -18,7 +19,6 @@ all: as1802 ld1802 nm1802 osize1802 dumprelocs1802 \
 
 test: as316 ld316 nm316 osize316 dumprelocs316 \
       as8060 ld8060 nm8060 osize8060 dumprelocs8060 \
-      as8070 ld8070 nm8070 osize8070 dumprelocs8070 \
       as8086 ld8086 nm8086 osize8086 dumprelocs8086 \
       ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600 \
       aspdp4 ldpdp4 nmpdp4 osizepdp4 dumprelocspdp4 \
