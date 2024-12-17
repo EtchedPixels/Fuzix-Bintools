@@ -35,7 +35,7 @@ SYM	sym[] = {
 	{	0,	".byte",	TDEFB,		XXXX	},
 	{	0,	".word",	TDEFW,		XXXX	},
 	{	0,	".dbyte",	TDEFW,		XXXX	},
-	{	0,	".blkb",	TDEFS,		XXXX	},
+	{	0,	".ds",		TDEFS,		XXXX	},
 	{	0,	".ascii",	TDEFM,		XXXX	},
 	{	0,	".org",		TORG,		XXXX	},
 	{	0,	".equ",		TEQU,		XXXX	},
@@ -50,6 +50,7 @@ SYM	sym[] = {
 	{	0,	"literal",	TSEGMENT,	LITERAL	},
 	{	0,	"commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	"buffers",	TSEGMENT,	BUFFERS	},
+	{	0,	".dp",		TSEGMENT,	ZP	},
 	{	0,	".code",	TSEGMENT,	CODE	},
 	{	0,	".data",	TSEGMENT,	DATA	},
 	{	0,	".bss",		TSEGMENT,	BSS	},
@@ -91,7 +92,7 @@ SYM	sym[] = {
 	{	0,	"bp",		TBRA,		0x64	},
 	{	0,	"bz",		TBRA,		0x6C	},
 	{	0,	"bra",		TBRA16,		0x74	},
-	{	0,	"bnz",		TBRA,		0x8C	},
+	{	0,	"bnz",		TBRA,		0x7C	},
 
 	/* exchange */
 	{	0,	"xch",		TXCH,		0x44	},
@@ -118,7 +119,7 @@ SYM	sym[] = {
 
 	/* Stack */
 	{	0,	"push",		TSTACK,		0x5408	},
-	{	0,	"pop",		TSTACK,		0x5C38	},
+	{	0,	"pop",		TSTACK,		0x5C3A	},
 
 	/* Helper ops */
 	{	0,	"jz",		TBRA16,		0x6C	},
