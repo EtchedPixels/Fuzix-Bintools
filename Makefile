@@ -445,6 +445,7 @@ install: all
 	cp as6809 ld6809 nm6809 osize6809 dumprelocs6809 $(CCROOT)/bin
 	cp as7000 ld7000 nm7000 osize7000 dumprelocs7000 $(CCROOT)/bin
 	cp as8008 ld8008 nm8008 osize8008 dumprelocs8008 $(CCROOT)/bin
+	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
 	cp as8080 ld8080 nm8080 osize8080 dumprelocs8080 $(CCROOT)/bin
 	cp ashc11 ldhc11 nmhc11 osizehc11 dumprelocshc11 $(CCROOT)/bin
 	cp as9900 ld9900 nm9900 osize9900 dumprelocs9900 $(CCROOT)/bin
@@ -464,7 +465,6 @@ installtest: test
 	mkdir -p $(CCROOT)/bin
 	cp as316 ld316 nm316 osize316 dumprelocs316 $(CCROOT)/bin
 	cp as8060 ld8060 nm8060 osize8060 dumprelocs8060 $(CCROOT)/bin
-	cp as8070 ld8070 nm8070 osize8070 dumprelocs8070 $(CCROOT)/bin
 	cp as8086 ld8086 nm8086 osize8086 dumprelocs8086 $(CCROOT)/bin
 	cp ascp1600 ldcp1600 nmcp1600 osizecp1600 dumprelocscp1600 $(CCROOT)/bin
 	cp aspe16 ldpe16 nmpe16 osizepe16 dumprelocspe16 $(CCROOT)/bin
