@@ -475,7 +475,7 @@ loop:
 		mode = a1.a_type & TMMODE;
 		r = a1.a_type & TMREG;
 		if (mode == TBR && r == A)
-			outab(opcode + 2);
+			outab(opcode ^ 2);
 		else if (mode == TWR) {
 			switch(a1.a_type & TMREG) {
 			case EA:
@@ -739,7 +739,7 @@ loop:
 				break;
 			}
 			if (r <= P3 && r2 == EA) {
-				outab(0x44 + r2);
+				outab(0x44 + r);
 				break;
 			}
 			aerr(BADREG);
