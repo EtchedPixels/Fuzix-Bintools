@@ -706,9 +706,10 @@ loop:
 			opcode = 0x00;
 		/* If none of these opcode is 0 */
 		getaddr_i(&a2);
+		/* reg/reg pairs */
+		r2 = a2.a_type & TMREG;
 		if ((a2.a_type & TMMODE) == TBR || (a2.a_type & TMMODE) == TWR) {
 			/* Register, register forms, somewhat irregular */
-			r2 = a2.a_type & TMREG;
 			if (r == A && r2 == S) {
 				outab(0x06);
 				break;

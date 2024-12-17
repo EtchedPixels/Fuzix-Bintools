@@ -117,8 +117,8 @@ SYM	sym[] = {
 	{	0,	"sr",		TAEA,		0x3C0C	},
 
 	/* Stack */
-	{	0,	"push",		TSTACK,		0x0854	},
-	{	0,	"pop",		TSTACK,		0x385C	},
+	{	0,	"push",		TSTACK,		0x5408	},
+	{	0,	"pop",		TSTACK,		0x5C38	},
 
 	/* Helper ops */
 	{	0,	"jz",		TBRA16,		0x6C	},
