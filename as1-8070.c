@@ -139,10 +139,9 @@ void getaddr_i(ADDR *ap)
 	else if (c == ':')
 		dp = 1;
 	/* Auto-index tag */
-	else if (c == '@') {
+	else if (c == '@')
 		autoi = 1;
-		c = getnb();
-	} else
+	else
 		unget(c);
 
 	c = getnb();
