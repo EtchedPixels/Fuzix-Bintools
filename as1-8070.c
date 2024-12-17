@@ -542,7 +542,6 @@ loop:
 		}
 		getaddr_i(&a2);
 		a_required(&a1);
-		index_required(&a2);
 		/* This can be indexed or autoindexed but must be a word
 		   register, or it can be direct */
 		switch(a2.a_type & TMADDR) {
@@ -570,7 +569,6 @@ loop:
 		getaddr_i(&a1);
 		comma();
 		getaddr_i(&a2);
-		index_required(&a2);
 		if ((a1.a_type & TMMODE) != TBR)
 			aerr(BADMODE);
 		r = a1.a_type & TMREG;
@@ -592,6 +590,10 @@ loop:
 			break;
 		}
 		switch(a2.a_type & TMADDR) {
+		case TIMMED:
+			outab(opcode + 4);
+			outrab(&a2);
+			break;
 		case TDIRECT:
 			outab(opcode + 5);
 			outrab(&a2);	/* Need to look at linker */
