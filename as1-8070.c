@@ -927,6 +927,8 @@ loop:
 				outab(3);		/* Skip over the jump */
 			}
 			outab(0x24);
+			/* Jump target is the byte before the expected one */
+			a1.a_value--;
 			outraw(&a1);
 		} else {
 			outab(opcode);
