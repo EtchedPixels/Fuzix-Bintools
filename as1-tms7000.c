@@ -96,6 +96,7 @@ static void getaddr_r(ADDR *ap)
 	ap->a_type = 0;
 	ap->a_flags = 0;
 	ap->a_value = 0;
+	ap->a_segment = UNKNOWN;
 	ap->a_sym = NULL;
 
 	c = getnb();
@@ -139,11 +140,13 @@ static void getaddr_r(ADDR *ap)
 	if (c == 'a') {
 		ap->a_type = TBR | TR | RA;
 		ap->a_value = 0;
+		ap->a_segment = ZP;
 		return;
 	}
 	if (c == 'b') {
 		ap->a_type = TBR | TR | RB;
 		ap->a_value = 1;
+		ap->a_segment = ZP;
 		return;
 	}
 	if (c == 's') {
