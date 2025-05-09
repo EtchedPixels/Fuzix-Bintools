@@ -495,7 +495,7 @@ loop:
 			getaddr(&a1);
 			constify(&a1);
 			istuser(&a1);
-			outrab(&a1);
+			outraw(&a1);
 		} while ((c=getnb()) == ',');
 		unget(c);
 		break;
