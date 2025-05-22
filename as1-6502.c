@@ -119,8 +119,10 @@ void getaddr(ADDR *ap)
 	ADDR tmp;
 
 	ap->a_type = 0;
+	ap->a_value = 0;
 	ap->a_flags = 0;
 	ap->a_sym = NULL;
+	ap->a_segment = 0;
 	
 	c = getnb();
 
@@ -218,6 +220,40 @@ void getaddr(ADDR *ap)
 			ap->a_type = TUSER|TMINDIR;
 	}
 }
+
+/* We need a separate handler if we want to allow
+	.byte 1,2,3,4
+   as well as
+   	.byte #1,#2,... etc
+   	
+   to avoid confusion with the comma in addressing modes */
+
+void getaddr_const(ADDR *ap)
+{
+	unsigned c;
+
+	ap->a_type = 0;
+	ap->a_value = 0;
+	ap->a_flags = 0;
+	ap->a_sym = NULL;
+	ap->a_segment = 0;
+	
+	c = getnb();
+
+	/* #foo */	
+	if (c == '#')
+		c = getnb();
+	if (c == '<')
+		ap->a_flags |= A_LOW;
+	else if (c == '>')
+		ap->a_flags |= A_HIGH;
+	else
+		unget(c);
+	expr1(ap, LOPRI, 0);
+	constify(ap);
+	istuser(ap);
+}
+
 
 /* Handle the corner case of labels in direct page being used as relative
    branches from the overlapping 'absolute' space. Assumes DP = 0 */
@@ -344,8 +380,8 @@ loop:
 			err('o', SYNTAX_ERROR);
 			return;
 		}
-		getaddr(&a1);
-		constify(&a1);
+		getaddr_const(&a1);
+//		constify(&a1);
 		istuser(&a1);
 		sp = lookup(id, uhash, 1);
 		if ((sp->s_type&TMMODE) != TNEW
@@ -363,7 +399,7 @@ loop:
 	opcode = sp->s_value;
 	switch (sp->s_type&TMMODE) {
 	case TORG:
-		getaddr(&a1);
+		getaddr_const(&a1);
 		constify(&a1);
 		istuser(&a1);
 		if (a1.a_segment != ABSOLUTE)
@@ -391,7 +427,7 @@ loop:
 
 	case TDEFB:
 		do {
-			getaddr(&a1);
+			getaddr_const(&a1);
 			constify(&a1);
 			istuser(&a1);
 			outrab(&a1);
@@ -401,7 +437,7 @@ loop:
 
 	case TDEFW:
 		do {
-			getaddr(&a1);
+			getaddr_const(&a1);
 			constify(&a1);
 			istuser(&a1);
 			outraw(&a1);
@@ -420,7 +456,7 @@ loop:
 		break;
 
 	case TDEFS:
-		getaddr(&a1);
+		getaddr_const(&a1);
 		constify(&a1);
 		istuser(&a1);
 		/* Write out the bytes. The BSS will deal with the rest */
