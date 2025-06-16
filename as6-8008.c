@@ -1,5 +1,5 @@
 /*
- * 8080 and 8085
+ * 8008
  * Basic symbol tables.
  * Contain all of the instructions
  * and register names.
@@ -30,6 +30,7 @@ SYM	sym[] = {
 	{	0,	".export",	TEXPORT,	XXXX	},
 	{	0,	"cond",		TCOND,		XXXX	},
 	{	0,	"endc",		TENDC,		XXXX	},
+	{	0,	"abs",		TSEGMENT,	ABSOLUTE},
 	{	0,	"code",		TSEGMENT,	CODE	},
 	{	0,	"data",		TSEGMENT,	DATA	},
 	{	0,	"bss",		TSEGMENT,	BSS	},
@@ -37,6 +38,7 @@ SYM	sym[] = {
 	{	0,	"common",	TSEGMENT,	COMMON	},
 	{	0,	"commondata",	TSEGMENT,	COMMONDATA },
 	{	0,	"buffers",	TSEGMENT,	BUFFERS	},
+	{	0,	".abs",		TSEGMENT,	ABSOLUTE},
 	{	0,	".code",	TSEGMENT,	CODE	},
 	{	0,	".data",	TSEGMENT,	DATA	},
 	{	0,	".bss",		TSEGMENT,	BSS	},
