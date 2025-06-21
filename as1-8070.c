@@ -578,6 +578,7 @@ loop:
 			/* Special cases */
 			if (opcode && (a2.a_type & TMMODE) == TUSER) {
 				outab(opcode);
+				outrab(&a2);
 				break;
 			}
 			aerr(BADREG);
