@@ -478,7 +478,7 @@ loop:
 		getaddr(&a1);
 		disp = a1.a_value - dot[segment] - 2;
 		outab(opcode);
-		if (disp < -128 || disp > 127)
+		if (segment_incompatible(&a1) || disp < -128 || disp > 127)
 			aerr(BRA_RANGE);
 		outab(disp);
 		break;
